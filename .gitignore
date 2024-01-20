@@ -3,3 +3,5 @@
 
 /output/
 /kaggle
+notebooks/.pybiomart.sqlite
+input/
