@@ -61,7 +61,7 @@ def limma_fit(
         input_path = data_dir + 'input.h5ad'
 
         cmd = [
-            '/opt/saturncloud/envs/rscript/bin/Rscript',
+            'Rscript',
             exec_path,
             '--input_h5ad',
             input_path,
@@ -121,7 +121,7 @@ def limma_contrast(
 
         # compute the contrast and write results to temporary dir
         cmd = [
-            '/opt/saturncloud/envs/rscript/bin/Rscript',
+            'Rscript',
             exec_path,
             '--input_fit',
             fit_path,
