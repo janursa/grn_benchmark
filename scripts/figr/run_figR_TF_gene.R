@@ -8,6 +8,7 @@ library(doParallel)
 library(BuenColors)
 library(FigR)
 library(BSgenome.Hsapiens.UCSC.hg38)
+
 cisCorr.filt = read.csv('cisCorr.filt.csv')
 RNAmat.s = readRDS('RNAmat.s.RDS')
 dorcMat.s = readRDS('dorcMat.s.RDS')
