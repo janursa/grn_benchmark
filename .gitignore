@@ -6,3 +6,4 @@
 notebooks/.pybiomart.sqlite
 input/
 test/
+notebooks/__pycache__/
