@@ -32,11 +32,15 @@ fit = readRDS(opt$input_fit)
 
 cat("> Computing contrast...\\n")
 
-contr <- makeContrasts(contrasts=opt$contrast, levels=colnames(coef(fit)))     
+contr <- makeContrasts(contrasts=opt$contrast, levels=colnames(coef(fit)))   
+
+
 tmp <- contrasts.fit(fit, contr)
 tmp <- eBayes(tmp)
-
 result <- topTable(tmp,  n=Inf, sort='none')
+
+# tmp <- glmQLFTest(fit, contrast=contr)
+# result <- topTags(tmp, n = Inf, sort='none')
 
 if (!(length(opt$contrast_output_path)==0)){
     write.csv(result, opt$contrast_output_path)

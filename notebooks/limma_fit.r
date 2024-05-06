@@ -59,21 +59,24 @@ make_mm <- function(formula_str, df){
 
 mm <- make_mm(opt$design, ad$obs)
 
-if (!(length(opt$plot_output_path)==0)){
-    cat("> Generating voom plot\\n")
-    pdf(file = opt$plot_output_path,   # The directory you want to save the file in
-        width = 4, # The width of the plot in inches
-        height = 4) # The height of the plot in inches
+# if (!(length(opt$plot_output_path)==0)){
+#     cat("> Generating voom plot\\n")
+#     pdf(file = opt$plot_output_path,   # The directory you want to save the file in
+#         width = 4, # The width of the plot in inches
+#         height = 4) # The height of the plot in inches
 
-    y <- voom(d0, mm, plot=TRUE)
-    dev.off()
-} else{
-    y <- voom(d0, mm, plot=FALSE)
-    }
-
+#     y <- voom(d0, mm, plot=TRUE)
+#     dev.off()
+# } else{
+#     y <- voom(d0, mm, plot=FALSE)
+# }
 
 cat("> Fitting...\\n")
+y <- voom(d0, mm, plot=FALSE)
 fit <- lmFit(y, mm)
+
+# y <- estimateDisp(d0, design = mm)
+# fit <- glmQLFit(y, mm)
 
 print(colnames(fit$coefficients))
 if(!(length(opt$fit_output_path)==0)){
