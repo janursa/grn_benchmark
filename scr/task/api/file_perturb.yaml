@@ -1,0 +1,22 @@
+type: file
+example: resources/perturb-multiomics-2024/perturb.h5ad
+info:
+  label: Perturbation data
+  summary: "Anndata with the normalized counts of the pseudobulked data."
+  file_type: h5ad
+  slots:
+    obs:
+      - name: cell_type
+        description: "Type of cell (e.g., B cells, T cells CD4+)."
+        type: string
+        required: true
+      - name: donor_id
+        description: "Identifier for the donor."
+        type: string
+        required: true
+    var:
+      - name: feature_type
+        description: "Type of the feature, either ATAC or GEX"
+        type: string
+        required: true
+    

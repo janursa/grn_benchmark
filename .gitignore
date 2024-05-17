@@ -1,9 +1,11 @@
 .ipynb_checkpoints
 .DS_Store
 
-/output/
+/output*
 /kaggle
 notebooks/.pybiomart.sqlite
 input/
 test/
 notebooks/__pycache__/
+draw/.*
+resources/
