@@ -9,3 +9,4 @@ test/
 notebooks/__pycache__/
 draw/.*
 resources/
+draw/pngs/*
