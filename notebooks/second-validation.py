@@ -10,7 +10,7 @@ import tqdm
 import numpy as np
 import pandas as pd
 import anndata
-from sklearn.preprocessing import LabelEncoder, RobustScaler
+from sklearn.preprocessing import LabelEncoder, RobustScaler, StandardScaler
 from sklearn.model_selection import GroupKFold, LeaveOneGroupOut
 from sklearn.svm import LinearSVR
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
@@ -75,13 +75,24 @@ def load_grn(filepath: str, gene_names: np.ndarray, eps: float = 1e-10) -> np.nd
     print(f'Sparsity: {np.mean(A == 0)}')
     return A
 
+
+def create_positive_control(X: np.ndarray, groups: np.ndarray):
+    grns = []
+    for group in np.unique(groups):
+        X_sub = X[groups == group, :]
+        X_sub = StandardScaler().fit_transform(X_sub)
+        grn = np.dot(X_sub.T, X_sub) / X_sub.shape[0]
+        grns.append(grn)
+    return np.mean(grns, axis=0)
+
+
 METHODS = ['collectRI', 'ananse', 'celloracle', 'figr', 'granie', 'scenicplus', 'scglue', 'positive-control', 'negative-control']
+#METHODS = ['collectRI', 'ananse', 'celloracle', 'figr', 'granie', 'scenicplus', 'scglue', 'positive-control']
 
 grns = []
 for method in METHODS:
     if method == 'positive-control':
-        #grn = load_grn(os.path.join(BASELINE_GRN_DIR, 'positive_control.csv'), gene_names)
-        grn = np.dot(X.T, X) / X.shape[0]
+        grn = create_positive_control(X, groups)
     elif method == 'negative-control':
         grn = 2 * (np.random.rand(n_genes, n_genes) - 0.5)
     else:
@@ -125,11 +136,16 @@ def cross_validate_gene(estimator_t: str, X: np.ndarray, groups: np.ndarray, grn
     
     # Feature selection
     scores = np.abs(grn[:, j])
-    scores[j] = 0
+    scores[j] = -1
     selected_features = np.argsort(scores)[-n_features:]
+    assert j not in selected_features
+    X_ = X[:, selected_features]
+
+    # Define labels
+    y_ = X[:, j]
 
     y_pred, y_target, r2s = [], [], []
-    for t, (train_index, test_index) in enumerate(LeaveOneGroupOut().split(X, X[:, 0], groups)):
+    for t, (train_index, test_index) in enumerate(LeaveOneGroupOut().split(X_, y_, groups)):
 
         if estimator_t == 'ridge':
             model = Ridge(random_state=SEED)
@@ -152,8 +168,6 @@ def cross_validate_gene(estimator_t: str, X: np.ndarray, groups: np.ndarray, grn
         else:
             raise NotImplementedError(f'Unknown model "{estimator_t}"')
 
-        X_ = X[:, selected_features]
-        y_ = X[:, j]
         X_train = X_[train_index, :]
         X_test = X_[test_index, :]
         y_train = y_[train_index]

@@ -13,6 +13,7 @@ import anndata as ad
 from sklearn.model_selection import LeaveOneOut, StratifiedKFold, GridSearchCV, RandomizedSearchCV, train_test_split, LeaveOneGroupOut, KFold
 from sklearn.metrics import r2_score, mean_absolute_error
 from sklearn.cluster import KMeans
+from sklearn.pipeline import Pipeline
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import Ridge, ElasticNet
 from sklearn.decomposition import TruncatedSVD, PCA
@@ -112,7 +113,10 @@ def run_multivariate_gb_regression(net: pd.DataFrame,
 
     # determine regressor 
     if reg_type=='ridge':
-        regr = Ridge(alpha=100)
+        regr = Pipeline([
+            ('scaler', StandardScaler()),
+            ('svc', Ridge(alpha=1))
+        ])
     elif reg_type=='GB':
         regr = lightgbm_wrapper(params)
     else:
@@ -133,6 +137,10 @@ def run_multivariate_gb_regression(net: pd.DataFrame,
             net_celltype = net[net.cell_type==cell_type]
         else:
             net_celltype = net.copy()
+
+        # Remove self-regulations
+        net_celltype = net_celltype[net_celltype['source'] != net_celltype['target']]
+
         # match net and df in terms of shared genes 
         net_genes = net_celltype.target.unique()
         shared_genes = np.intersect1d(net_genes, df.columns)
@@ -239,5 +247,6 @@ for grn_model in ['positive_control', 'negative_control'] + list(grn_model_names
     else:
         output = run_multivariate_gb_regression(net, theta=theta, include_missing=True, reg_type=reg_type, 
             params = dict(random_state=32, n_estimators=100, min_samples_leaf=2, min_child_samples=1, feature_fraction=0.05, verbosity=-1))
+    print(f'{work_dir}/benchmark/scores/{reg_type}/{str(theta)}/{norm_method}/{grn_model}_{manipulate}.json')
     with open(f'{work_dir}/benchmark/scores/{reg_type}/{str(theta)}/{norm_method}/{grn_model}_{manipulate}.json', 'w') as f:
         json.dump(output, f)
