@@ -115,7 +115,7 @@ def run_multivariate_gb_regression(net: pd.DataFrame,
     if reg_type=='ridge':
         regr = Pipeline([
             ('scaler', StandardScaler()),
-            ('svc', Ridge(alpha=1))
+            ('svc', Ridge(alpha=100))
         ])
     elif reg_type=='GB':
         regr = lightgbm_wrapper(params)
@@ -238,8 +238,8 @@ os.makedirs(f'{work_dir}/benchmark/scores/{reg_type}/{str(theta)}/{norm_method}'
 for grn_model in ['positive_control', 'negative_control'] + list(grn_model_names):
     print(grn_model)
 
-    if os.path.exists(f'{work_dir}/benchmark/scores/{reg_type}/{str(theta)}/{norm_method}/{grn_model}_{manipulate}.json'):
-        continue
+    #if os.path.exists(f'{work_dir}/benchmark/scores/{reg_type}/{str(theta)}/{norm_method}/{grn_model}_{manipulate}.json'):
+    #    continue
 
     net = grn_models_dict[grn_model]
     if reg_type=='ridge':
