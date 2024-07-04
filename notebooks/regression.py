@@ -14,6 +14,7 @@ from sklearn.model_selection import LeaveOneOut, StratifiedKFold, GridSearchCV, 
 from sklearn.metrics import r2_score, mean_absolute_error
 from sklearn.cluster import KMeans
 from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import QuantileTransformer
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import Ridge, ElasticNet
 from sklearn.decomposition import TruncatedSVD, PCA
@@ -131,12 +132,19 @@ def main(grn_model: str, reg_type: str, norm_method: str, theta: float):
 
             # net is cell type dependent or not 
             if 'cell_type' in net:
-                net_celltype = net[net.cell_type==cell_type]
+                net_celltype = net[net.cell_type == cell_type]
             else:
                 net_celltype = net.copy()
 
             # Remove self-regulations
             net_celltype = net_celltype[net_celltype['source'] != net_celltype['target']]
+
+            # Map the weight distribution to the uniform distribution
+            net_celltype['weight'] = np.squeeze(QuantileTransformer(
+                n_quantiles=len(net_celltype),
+                subsample=len(net_celltype),
+                output_distribution='uniform',
+            ).fit_transform(net_celltype['weight'].values[:, np.newaxis]))
 
             # match net and df in terms of shared genes 
             net_genes = net_celltype.target.unique()
@@ -159,7 +167,7 @@ def main(grn_model: str, reg_type: str, norm_method: str, theta: float):
 
                 # Subset TFs based on weights
                 degrees = np.mean(np.abs(X), axis=0)
-                mask = (degrees >= np.quantile(degrees, theta))
+                mask = (degrees >= np.quantile(degrees, 1 - theta))
                 X = X[:, mask]
 
             else:
@@ -168,20 +176,23 @@ def main(grn_model: str, reg_type: str, norm_method: str, theta: float):
                 mask = (degrees <= np.quantile(degrees, theta))
                 X = X[:, mask]
 
-            if verbose >=2:
+            if verbose >= 2:
                 print(f'X (genes, TFs): {X.shape}, Y (genes, samples): {Y.shape}')
 
             # fill random weights for the missing genes
             if include_missing:
+
+                # Gene expression data imputation
                 missing_genes = np.setdiff1d(df.columns, shared_genes)
                 Y_missing = df_celltype[missing_genes].values.T
-                #tfs_n = net_celltype.source.unique().shape[0]
-                tfs_n = X.shape[1]
                 
-                sparsity = (X==0).sum()/X.size
-                ratios = [sparsity, (1-sparsity)/2, (1-sparsity)/2]
-                shape = (missing_genes.shape[0], tfs_n)
-                X_random = np.random.choice([0, -1, 1], size=shape, p=ratios)
+                # GRN data imputation
+                sparsity = np.mean(X == 0)
+                shape = (missing_genes.shape[0], X.shape[1])
+                X_random = np.random.uniform(low=0, high=1, size=shape)
+                X_random[np.random.rand(*X_random.shape) < sparsity] = 0
+
+                # Data imputation
                 X = np.concatenate([X, X_random], axis=0)
                 Y = np.concatenate([Y, Y_missing], axis=0)
                 print(f'X (genes, TFs): {X.shape}, Y (genes, samples): {Y.shape}')
@@ -273,10 +284,6 @@ reg_type = args.reg_type
 norm_method = args.norm_method
 theta = args.theta
 
-#grn_model_names = ['collectRI', 'ananse', 'figr', 'celloracle', 'granie', 'scglue', 'scenicplus']
-#for grn_model in ['positive_control', 'negative_control'] + list(grn_model_names):
-for grn_model in ['scenicplus']:
-    for estimator_t in ['ridge']:
-        for norm_method in ['pearson', 'lognorm', 'seurat_pearson', 'seurat_lognorm', 'scgen_pearson', 'scgen_lognorm']:
-            for theta in [0.5]:
-                main(grn_model, estimator_t, norm_method, theta)
+grn_model_names = ['collectRI', 'ananse', 'figr', 'celloracle', 'granie', 'scglue', 'scenicplus']
+for grn_model in ['positive_control', 'negative_control'] + list(grn_model_names):
+    main(grn_model, reg_type, norm_method, theta)
