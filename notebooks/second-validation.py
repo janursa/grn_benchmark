@@ -214,9 +214,9 @@ def main(estimator_t: str, norm_t: str, reduction_t: Union[str, float], override
 
     folder = os.path.join(RESULTS_DIR, norm_t, estimator_t, reduction_t if isinstance(reduction_t, str) else str(int(100 * reduction_t)))
     os.makedirs(folder, exist_ok=True)
-    for i, method in enumerate(METHODS):
-        if (not override_) and os.path.exists(os.path.join(folder, f'{method}.results.json')):
-            continue
+    for i, method in enumerate(['collectRI', 'ananse', 'celloracle', 'figr', 'granie', 'scenicplus', 'scglue', 'positive-control', 'negative-control']):
+        #if (not override_) and os.path.exists(os.path.join(folder, f'{method}.results.json')):
+        #    continue
         print(method, reduction_t, norm_t)
         grn = grns[i]
         results = cross_validate(estimator_t, gene_names, X, groups, grn, n_features)
@@ -224,6 +224,8 @@ def main(estimator_t: str, norm_t: str, reduction_t: Union[str, float], override
             json.dump(results, f)
 
 
-for theta in ['max']:
-    for norm_t in ['lognorm']:
-        main('gbm', norm_t, theta)
+estimator = 'ridge'
+for theta in ['min', 0.1, 0.2]:
+    #for norm in ['lognorm']:
+    for norm in ['pearson', 'lognorm', 'seurat_pearson', 'seurat_lognorm', 'scgen_pearson', 'scgen_lognorm']:
+        main(estimator, norm, theta)
