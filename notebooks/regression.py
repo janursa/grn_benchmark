@@ -23,40 +23,55 @@ def set_global_seed(seed):
 
 
 
+# class lightgbm_wrapper:
+#     def __init__(self, params):
+#         self.params =  params
+        
+#     def fit(self, X_train, Y_train):
+#         self.n_sample = Y_train.shape[1]
+#         self.regr_samples = []
+#         for i in range(self.n_sample):
+#             regr = lightgbm.LGBMRegressor(**self.params)
+#             regr.fit(X_train, Y_train[:, i])
+#             self.regr_samples.append(regr)
+            
+            
+#     def predict(self,X_test):
+#         y_pred_list = []
+#         for i in range(self.n_sample):
+#             regr = self.regr_samples[i]
+#             y_pred = regr.predict(X_test)
+#             y_pred_list.append(y_pred)
+#         return np.stack(y_pred_list, axis=1)
+from concurrent.futures import ThreadPoolExecutor
+
 class lightgbm_wrapper:
-    def __init__(self, params):
+    def __init__(self, params, max_workers=None):
         self.params =  params
+        self.max_workers = max_workers
         
     def fit(self, X_train, Y_train):
         self.n_sample = Y_train.shape[1]
-        self.regr_samples = []
-        for i in range(self.n_sample):
+        self.regr_samples = [None] * self.n_sample
+        
+        def fit_sample(i):
             regr = lightgbm.LGBMRegressor(**self.params)
             regr.fit(X_train, Y_train[:, i])
-            self.regr_samples.append(regr)
+            self.regr_samples[i] = regr
+        
+        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+            executor.map(fit_sample, range(self.n_sample))
             
-            
-    def predict(self,X_test):
-        y_pred_list = []
-        for i in range(self.n_sample):
+    def predict(self, X_test):
+        def predict_sample(i):
             regr = self.regr_samples[i]
-            y_pred = regr.predict(X_test)
-            y_pred_list.append(y_pred)
+            return regr.predict(X_test)
+        
+        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+            y_pred_list = list(executor.map(predict_sample, range(self.n_sample)))
+        
         return np.stack(y_pred_list, axis=1)
 
-    # class lightgbm_wrapper:
-    #     def __init__(self, params):
-    #         self.params =  params
-            
-    #     def fit_predict(self, X_train, Y_train, X_test):
-    #         y_pred_list = []
-    #         for i in range(Y_train.shape[1]):
-    #             regr = lightgbm.LGBMRegressor(**self.params)
-    #             regr.fit(X_train, Y_train[:, i])
-    #             y_pred = regr.predict(X_test)
-    #             y_pred_list.append(y_pred)
-                
-    #         return np.stack(y_pred_list, axis=1)
 
 def cv_5(genes_n):
     '''5 fold standard'''
@@ -89,8 +104,6 @@ def run_method_1(
             net: pd.DataFrame, 
             train_df: pd.DataFrame,
             reg_type: str = 'GRB',
-            theta: float = 1,
-            manipulate: bool = False,
             exclude_missing_genes: bool = False,
             verbose: int = 0) -> None: 
     """
@@ -175,16 +188,26 @@ def main(model_name: str, reg_type: str, norm_method: str, theta: float, tf_n:in
 
     train_data = adata_rna.layers[norm_method]
     train_df = pd.DataFrame(train_data, columns=adata_rna.var_names)
-    os.makedirs(f'{work_dir}/benchmark/scores/exclude_missing_genes_{exclude_missing_genes}/{reg_type}/{str(theta)}/{norm_method}', exist_ok=True)
 
-    print(model_name)
+    train_df = train_df.sample(n=200, random_state=42) #TODO: remove this
+    # check if the file already exist
+    print(f'{reg_type=}, {norm_method=}, {model_name=}, {exclude_missing_genes=}')
+    folder = format_folder(work_dir, exclude_missing_genes, reg_type, theta, tf_n, norm_method)
+    os.makedirs(folder, exist_ok=True)
+    file = f'{folder}/{model_name}_{manipulate}.json'
 
+    if os.path.exists(file):
+        if force==False:
+            print('Skip running because file exists: ',file)
+            return 
+    
+    # get the grn model
     if model_name in ['positive_control', 'negative_control']:
         net=None 
     else:
         net = pd.read_csv(f'../output/benchmark/grn_models/{model_name}.csv', index_col=0)
     
-    
+    # case dependent modifications
     if model_name == 'positive_control':
         net = create_positive_control(train_df)
         net = pd.DataFrame(net, index=gene_names, columns=gene_names)
@@ -211,20 +234,30 @@ def main(model_name: str, reg_type: str, norm_method: str, theta: float, tf_n:in
             degrees = net.abs().sum(axis=0)
         net = net.loc[:, degrees>=degrees.quantile((1-theta))]
     else:
+
+        if tf_n>net.shape[1]:
+
+            print(f'Skip running because tf_n ({tf_n}) is bigger than net.shape[1] ({net.shape[1]})')
+            return 
         degrees = net.abs().sum(axis=0)
         net = net[degrees.nlargest(tf_n).index]
-    
-
 
     train_df = train_df.T # make it gene*sample
 
+    # manipulate
+    if manipulate=='signed':
+        net = net.map(lambda x: 1 if x>0 else (-1 if x<0 else 0))
 
-    output = run_method_1(net, train_df, theta=theta,  exclude_missing_genes=exclude_missing_genes, reg_type=reg_type)
 
-    print(f'{work_dir}/benchmark/scores/exclude_missing_genes_{exclude_missing_genes}/{reg_type}/{str(theta)}/{norm_method}/{model_name}_{manipulate}.json')
-    with open(f'{work_dir}/benchmark/scores/exclude_missing_genes_{exclude_missing_genes}/{reg_type}/{str(theta)}/{norm_method}/{model_name}_{manipulate}.json', 'w') as f:
+    output = run_method_1(net, train_df, exclude_missing_genes=exclude_missing_genes, reg_type=reg_type)
+    
+    
+    print(file)
+    with open(file, 'w') as f:
         json.dump(output, f)
 
+def format_folder(work_dir, exclude_missing_genes, reg_type, theta, tf_n, norm_method):
+    return f'{work_dir}/benchmark/scores/exclude_missing_genes_{exclude_missing_genes}/{reg_type}/theta_{theta}_tf_n_{tf_n}/{norm_method}'
 if __name__ == '__main__':
     set_global_seed(32)
 
@@ -234,33 +267,61 @@ if __name__ == '__main__':
     gene_names = adata_rna.var.index.to_numpy()
     tf_all = np.loadtxt(f'{work_dir}/utoronto_human_tfs_v_1.01.txt', dtype=str)
 
-
-    
-    exclude_missing_genes = False 
-    manipulate=None
     
 
-    if False:
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--experiment', type=str, default='theta', help="Type of experiment")
+    parser.add_argument('--exclude-missing-genes', action='store_true', help="Exclude missing genes from evaluation.")
+    parser.add_argument('--force', action='store_true', help="Force overwrite the files")
+    parser.add_argument('--manipulate', type=str, default=None, help="None, signed, shuffle")
+    parser.add_argument('--reg_type', type=str, default='ridge', help="Regression type")
+
+    args = parser.parse_args()
+
+    exclude_missing_genes = args.exclude_missing_genes
+    experiment = args.experiment
+    force = args.force
+    manipulate=args.manipulate
+    reg_type=args.reg_type
+    
+    print(f'{experiment=},{exclude_missing_genes=},{force=}, {manipulate=}')
+
+    grn_model_names = ['negative_control', 'positive_control'] + ['collectRI', 'figr', 'celloracle', 'granie', 'scglue', 'scenicplus']
+    norm_methods = ['pearson','lognorm','scgen_pearson','scgen_lognorm','seurat_pearson','seurat_lognorm'] #['pearson','lognorm','scgen_pearson','scgen_lognorm','seurat_pearson','seurat_lognorm']
+
+    if experiment=='default': # default 
+        theta = 1.0
+        tf_n = None
+        for norm_method in norm_methods:
+            for grn_model in grn_model_names:
+                main(grn_model, reg_type, norm_method, theta, tf_n, exclude_missing_genes, manipulate)
+    elif experiment=='theta': #experiment with thetas
         thetas = np.linspace(0, 1, 5) # np.linspace(0, 1, 5)
         tf_n = None
-        grn_model_names = ['collectRI', 'figr', 'celloracle', 'granie', 'scglue', 'scenicplus']
-        norm_methods = ['scgen_pearson'] #['pearson','lognorm','scgen_pearson','scgen_lognorm','seurat_pearson','seurat_lognorm']
-
-
-        for grn_model in ['negative_control', 'positive_control'] + list(grn_model_names):
-            for reg_type in ['ridge']:
-                for theta in thetas:
-                    for norm_method in norm_methods:
-                        main(grn_model, reg_type, norm_method, theta, tf_n, exclude_missing_genes, manipulate)
-    else:
         reg_type = 'ridge'
+        norm_methods = ['scgen_pearson', 'seurat_lognorm']
+        for grn_model in grn_model_names:
+            for theta in thetas:
+                for norm_method in norm_methods:
+                    main(grn_model, reg_type, norm_method, theta, tf_n, exclude_missing_genes, manipulate)
+    elif experiment=='tf_n':   #experiment with tf_n
+        theta = 1
+        tf_ns = [140, 389, 557]
+        # norm_methods = ['scgen_pearson'] #['pearson','lognorm','scgen_pearson','scgen_lognorm','seurat_pearson','seurat_lognorm']
+        for grn_model in grn_model_names:
+            for tf_n in tf_ns:
+                for norm_method in norm_methods:
+                    main(grn_model, reg_type, norm_method, theta, tf_n, exclude_missing_genes, manipulate)
+    elif False: #single experiment
+        reg_type = 'GB'
         norm_method = 'scgen_pearson'
         # theta = 1
         tf_n = None
-        model_name = 'scenicplus'
+        model_name = 'celloracle'
         for theta in [1]:
             main(model_name, reg_type, norm_method, theta, tf_n, exclude_missing_genes, manipulate)
-
+    else:
+        raise ValueError('define first')
 
 
 # parser = argparse.ArgumentParser()
@@ -283,3 +344,18 @@ if __name__ == '__main__':
 # manipulate = args.manipulate
 # model_name = args.grn_model
 
+
+
+# class lightgbm_wrapper:
+#     def __init__(self, params):
+#         self.params =  params
+        
+#     def fit_predict(self, X_train, Y_train, X_test):
+#         y_pred_list = []
+#         for i in range(Y_train.shape[1]):
+#             regr = lightgbm.LGBMRegressor(**self.params)
+#             regr.fit(X_train, Y_train[:, i])
+#             y_pred = regr.predict(X_test)
+#             y_pred_list.append(y_pred)
+            
+#         return np.stack(y_pred_list, axis=1)

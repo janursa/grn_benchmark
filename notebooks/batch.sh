@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --partition=maxcpu
-#SBATCH --time=120:00:00
+#SBATCH --time=40:00:00
 #SBATCH --nodes=1
 #SBATCH --job-name=testjob
 #SBATCH --output=logs/first-%N-%j.out
