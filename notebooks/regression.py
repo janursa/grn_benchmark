@@ -3,87 +3,76 @@ sys.path.append('/lustre1/project/stg_00019/research/Antoine/dependencies')
 
 import os
 import argparse
-import gzip
-import tqdm
-import scipy
 import json
 import pandas as pd
 import numpy as np
 import anndata as ad
-from sklearn.model_selection import LeaveOneOut, StratifiedKFold, GridSearchCV, RandomizedSearchCV, train_test_split, LeaveOneGroupOut, KFold
 from sklearn.metrics import r2_score, mean_absolute_error
-from sklearn.cluster import KMeans
 from sklearn.pipeline import Pipeline
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.linear_model import Ridge, ElasticNet
-from sklearn.decomposition import TruncatedSVD, PCA
-from sklearn.preprocessing import StandardScaler, OneHotEncoder, LabelEncoder
-from sklearn.multioutput import MultiOutputRegressor
-
-
-parser = argparse.ArgumentParser()
-parser.add_argument('norm_method', type=str)
-parser.add_argument('reg_type', type=str)  # GB, ridge
-parser.add_argument('theta', type=float)
-args = parser.parse_args()
-
-reg_type = args.reg_type
-norm_method = args.norm_method
-theta = args.theta
-
-work_dir = '../output'
-DATA_DIR = os.path.join('..', 'output', 'preprocess')
-GRN_DIR = os.path.join('..', 'output', 'benchmark', 'grn_models')
-BASELINE_GRN_DIR = os.path.join('..', 'output', 'benchmark', 'baseline_models')
-RESULTS_DIR = os.path.join('..', 'output', 'benchmark', 'second-validation')
-os.makedirs(RESULTS_DIR, exist_ok=True)
-
-adata_rna = ad.read_h5ad(os.path.join(DATA_DIR, 'bulk_adata_integrated.h5ad'))
-gene_names = adata_rna.var.index.to_numpy()
-
-X = adata_rna.layers[norm_method]
-
-df_train = {
-    'sm_name': adata_rna.obs.sm_name.to_numpy(),
-    'cell_type': adata_rna.obs.cell_type.to_numpy(),
-    'plate_name': adata_rna.obs.plate_name.to_numpy(),
-    'row': adata_rna.obs.row.to_numpy(),
-}
-for j, gene_name in enumerate(gene_names):
-    df_train[gene_name] = X[:, j]
-df_train = pd.DataFrame(df_train)
-df_train = df_train.set_index(['sm_name','cell_type','plate_name','row'])
-
-#df_train = pd.read_csv(f'../resources/df_train/df_train_{norm_method}.csv').set_index(['sm_name','cell_type','plate_name','row'])
-#print(df_train)
-
-grn_model_names = ['collectRI', 'ananse', 'figr', 'celloracle', 'granie', 'scglue', 'scenicplus']
-
-grn_models_dict = {}
-for name in grn_model_names:
-    grn_models_dict[name] = pd.read_csv(f'../output/benchmark/grn_models/{name}.csv', index_col=0)
-baselines = ['positive_control', 'negative_control']
-for name in baselines:
-    grn_models_dict[name] = pd.read_csv(f'../output/benchmark/baseline_models/{name}.csv', index_col=0)
-# grn_models_dict = {surragate_names[name]:grn for name, grn in grn_models_dict.items()}
-
+from sklearn.linear_model import Ridge
+from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_squared_error
 import lightgbm
-from sklearn.ensemble import GradientBoostingRegressor
+import random 
+
+
+def set_global_seed(seed):
+    np.random.seed(seed)
+    random.seed(seed)
+    lightgbm.LGBMRegressor().set_params(random_state=seed)
+
+
+
+# class lightgbm_wrapper:
+#     def __init__(self, params):
+#         self.params =  params
+        
+#     def fit(self, X_train, Y_train):
+#         self.n_sample = Y_train.shape[1]
+#         self.regr_samples = []
+#         for i in range(self.n_sample):
+#             regr = lightgbm.LGBMRegressor(**self.params)
+#             regr.fit(X_train, Y_train[:, i])
+#             self.regr_samples.append(regr)
+            
+            
+#     def predict(self,X_test):
+#         y_pred_list = []
+#         for i in range(self.n_sample):
+#             regr = self.regr_samples[i]
+#             y_pred = regr.predict(X_test)
+#             y_pred_list.append(y_pred)
+#         return np.stack(y_pred_list, axis=1)
+from concurrent.futures import ThreadPoolExecutor
 
 class lightgbm_wrapper:
-    def __init__(self, params):
+    def __init__(self, params, max_workers=None):
         self.params =  params
+        self.max_workers = max_workers
         
-    def fit_predict(self, X_train, Y_train, X_test):
-        y_pred_list = []
-        for i in range(Y_train.shape[1]):
+    def fit(self, X_train, Y_train):
+        self.n_sample = Y_train.shape[1]
+        self.regr_samples = [None] * self.n_sample
+        
+        def fit_sample(i):
             regr = lightgbm.LGBMRegressor(**self.params)
             regr.fit(X_train, Y_train[:, i])
-            y_pred = regr.predict(X_test)
-            y_pred_list.append(y_pred)
+            self.regr_samples[i] = regr
+        
+        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+            executor.map(fit_sample, range(self.n_sample))
             
+    def predict(self, X_test):
+        def predict_sample(i):
+            regr = self.regr_samples[i]
+            return regr.predict(X_test)
+        
+        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+            y_pred_list = list(executor.map(predict_sample, range(self.n_sample)))
+        
         return np.stack(y_pred_list, axis=1)
+
+
 def cv_5(genes_n):
     '''5 fold standard'''
     num_groups = 5
@@ -98,151 +87,275 @@ def degree_centrality(net, source='source', target='target', normalize=False):
     counts = net.groupby(source)[target].nunique().values
     if normalize:
         total_targets = net[target].nunique()
-        counts = counts/total_targets
+        counts = counts / total_targets
     return counts
 
-def run_multivariate_gb_regression(net: pd.DataFrame, 
-            theta: float = theta,
-            reg_type: str = 'GB', 
-            params: dict = {}, 
-            include_missing: bool = False,
-            verbose: int = 0) -> None:     
-    #
-    df = df_train.copy()
-    df = df.reset_index(level='cell_type').set_index('cell_type') 
 
+def create_positive_control(X: np.ndarray) -> np.ndarray:
+    X = StandardScaler().fit_transform(X)
+    return np.dot(X.T, X) / X.shape[0]
+
+def pivot_grn(net):
+    # Remove self-regulations
+    net = net[net['source'] != net['target']]
+    df_tmp = net.pivot(index='target', columns='source', values='weight')
+    return df_tmp.fillna(0)
+def run_method_1(
+            net: pd.DataFrame, 
+            train_df: pd.DataFrame,
+            reg_type: str = 'GRB',
+            exclude_missing_genes: bool = False,
+            verbose: int = 0) -> None: 
+    """
+    net: a df with index as genes and columns as tfs
+    train_df: a df with index as genes and columns as samples
+    """
+    gene_names_grn = net.index.to_numpy()
     # determine regressor 
     if reg_type=='ridge':
-        regr = Pipeline([
-            ('scaler', StandardScaler()),
-            ('svc', Ridge(alpha=1))
-        ])
+        # regr = Pipeline([
+        #     ('scaler', StandardScaler()),
+        #     ('svc', Ridge(alpha=100, random_state=32))
+        # ])
+        regr =  Ridge(**dict(random_state=32, alpha=100))
     elif reg_type=='GB':
-        regr = lightgbm_wrapper(params)
+        regr = lightgbm_wrapper(dict(random_state=32, n_estimators=100, min_samples_leaf=2, min_child_samples=1, feature_fraction=0.05, verbosity=-1))
     else:
-        raise ValueError("define first")
+        raise ValueError("define first")        
+    
+    n_tfs = net.shape[1]
+    # construct feature and target space
+    if exclude_missing_genes:
+        included_genes = gene_names_grn
+    else:
+        included_genes = gene_names
+    
+    X_df = pd.DataFrame(np.zeros((len(included_genes), n_tfs)), index=included_genes)
+    Y_df = train_df.loc[included_genes,:]
 
-    # for each cell type
-    cell_type_index = df.index
-    Y_true_matrix_stack = []
-    Y_pred_matrix_stack = []
-    for cell_type in cell_type_index.unique():
-        print('---- ', cell_type,' --------')
-        # subset df for cell type 
-        mask = cell_type_index==cell_type
-        df_celltype = df[mask]
+    mask_shared_genes = X_df.index.isin(net.index)
+    print(X_df.shape, Y_df.shape)
+    
+    # fill the actuall regulatory links
+    X_df.loc[mask_shared_genes, :] = net.values
+    X = X_df.values.copy()
 
-        # net is cell type dependent or not 
-        if 'cell_type' in net:
-            net_celltype = net[net.cell_type==cell_type]
-        else:
-            net_celltype = net.copy()
-        # match net and df in terms of shared genes 
-        net_genes = net_celltype.target.unique()
-        shared_genes = np.intersect1d(net_genes, df.columns)
-        net_celltype = net_celltype[net_celltype.target.isin(shared_genes)]
+    # run cv 
+    groups = cv_5(len(included_genes))
+    # initialize y_pred with the mean of gene expressed across all samples
+    means = Y_df.mean(axis=0)
+    y_pred = Y_df.copy()
+    y_pred[:] = means
+    y_pred = y_pred.values
 
+    
+    # initialize y_true
+    Y = Y_df.values
+    y_true = Y.copy()
 
-        # define X and Y 
-        Y = df_celltype[shared_genes].values.T
-        X = net_celltype.pivot(index='target', columns='source', values='weight').fillna(0).values
+    unique_groups = np.unique(groups)
+    
+    for group in unique_groups:
+        mask_va = groups == group
+        mask_tr = ~mask_va
 
-        # Subset TFs based on degrees
-        degrees = degree_centrality(net_celltype, source='source', target='target', normalize=False)
-        mask = (degrees <= np.quantile(degrees, theta))
-        X = X[:, mask]
+        # Use logical AND to combine masks correctly
+        X_tr = X[mask_tr & mask_shared_genes, :]
+        Y_tr = Y[mask_tr & mask_shared_genes, :]
 
-        if verbose >=2:
-            print(f'X (genes, TFs): {X.shape}, Y (genes, samples): {Y.shape}')
+        regr.fit(X_tr, Y_tr)
 
-        # fill random weights for the missing genes
-        if include_missing==True:
-            missing_genes = np.setdiff1d(df.columns, shared_genes)
-            Y_missing = df_celltype[missing_genes].values.T
-            #tfs_n = net_celltype.source.unique().shape[0]
-            tfs_n = X.shape[1]
-            
-            sparsity = (X==0).sum()/X.size
-            ratios = [sparsity, (1-sparsity)/2, (1-sparsity)/2]
-            shape = (missing_genes.shape[0], tfs_n)
-            X_random = np.random.choice([0, -1, 1], size=shape, p=ratios)
-            X = np.concatenate([X, X_random], axis=0)
-            Y = np.concatenate([Y, Y_missing], axis=0)
-            print(f'X (genes, TFs): {X.shape}, Y (genes, samples): {Y.shape}')
-        else:
-            pass 
-        
-        if manipulate=='shuffled':
-            X_f = X.flatten()
-            np.random.shuffle(X_f)
-            X = X_f.reshape(X.shape)
-        elif manipulate=='signed':
-            X[X>0]=1
-            X[X<0]=-1
-            
-        # define cv scheme
-        groups = cv_5(X.shape[0])
-
-        # run cv 
-        Y_pred_stack = []
-        Y_true_stack = []
-        unique_groups = np.unique(groups)
-        
-        for group in unique_groups:
-            mask_va = groups==group
-            mask_tr = ~mask_va
-
-            X_tr, Y_tr = X[mask_tr,:], Y[mask_tr,:]
-            X_va, Y_true = X[mask_va,:], Y[mask_va,:]
-
-            if reg_type=='GB':
-                Y_pred = regr.fit_predict(X_tr, Y_tr, X_va)
-            else:
-                regr.fit(X_tr, Y_tr)
-                Y_pred = regr.predict(X_va)
-
-            Y_pred_stack.append(Y_pred)
-            Y_true_stack.append(Y_true)
-        y_pred = np.concatenate(Y_pred_stack, axis=0)
-        y_true = np.concatenate(Y_true_stack, axis=0)
-        if verbose >= 1:
-            score_r2  = r2_score(y_true, y_pred, multioutput='variance_weighted') #uniform_average', 'variance_weighted
-            loss_mse  = mean_squared_error(y_true, y_pred)
-            print(f'score_r2: ', score_r2, 'loss_mse: ', loss_mse)
-        Y_true_matrix_stack.append(y_true)
-        Y_pred_matrix_stack.append(y_pred)
-
-    Y_true = np.concatenate(Y_true_matrix_stack, axis=1)
-    Y_pred = np.concatenate(Y_pred_matrix_stack, axis=1)
-
-    mean_score_r2 = r2_score(Y_true, Y_pred, multioutput='variance_weighted')
-    gene_scores_r2 = r2_score(Y_true.T, Y_pred.T, multioutput='raw_values')
-
-    mean_mse = mean_absolute_error(Y_true, Y_pred, multioutput='uniform_average')
-    gene_mse = mean_absolute_error(Y_true.T, Y_pred.T, multioutput='raw_values')
+        y_pred[mask_va & mask_shared_genes, :] = regr.predict(X[mask_va & mask_shared_genes, :])
 
 
-    output = dict(mean_score_r2=mean_score_r2, gene_scores_r2=list(gene_scores_r2),
-                mean_mse=mean_mse, gene_mse=list(gene_mse))
+    assert ~(y_true==0).any()
+
+    # if verbose >= 1:
+    score_r2  = r2_score(y_true, y_pred, multioutput='variance_weighted') #uniform_average', 'variance_weighted
+    loss_mse  = mean_squared_error(y_true, y_pred)
+    print(f'score_r2: ', score_r2, 'loss_mse: ', loss_mse)
+
+
+    mean_score_r2 = r2_score(y_true, y_pred, multioutput='variance_weighted')
+    gene_scores_r2 = r2_score(y_true.T, y_pred.T, multioutput='raw_values')
+
+    output = dict(mean_score_r2=mean_score_r2, gene_scores_r2=list(gene_scores_r2))
 
     return output
 
-manipulate = None #'signed', None 'shuffled'
 
-os.makedirs(f'{work_dir}/benchmark/scores/{reg_type}/{str(theta)}/{norm_method}', exist_ok=True)
+def main(model_name: str, reg_type: str, norm_method: str, theta: float, tf_n:int, exclude_missing_genes: bool, manipulate: bool):
 
-for grn_model in ['positive_control', 'negative_control'] + list(grn_model_names):
-    print(grn_model)
+    train_data = adata_rna.layers[norm_method]
+    train_df = pd.DataFrame(train_data, columns=adata_rna.var_names)
 
-    if os.path.exists(f'{work_dir}/benchmark/scores/{reg_type}/{str(theta)}/{norm_method}/{grn_model}_{manipulate}.json'):
-        continue
+    train_df = train_df.sample(n=200, random_state=42) #TODO: remove this
+    # check if the file already exist
+    print(f'{reg_type=}, {norm_method=}, {model_name=}, {exclude_missing_genes=}')
+    folder = format_folder(work_dir, exclude_missing_genes, reg_type, theta, tf_n, norm_method)
+    os.makedirs(folder, exist_ok=True)
+    file = f'{folder}/{model_name}_{manipulate}.json'
 
-    net = grn_models_dict[grn_model]
-    if reg_type=='ridge':
-        output = run_multivariate_gb_regression(net, theta=theta, include_missing=True, reg_type=reg_type)
+    if os.path.exists(file):
+        if force==False:
+            print('Skip running because file exists: ',file)
+            return 
+    
+    # get the grn model
+    if model_name in ['positive_control', 'negative_control']:
+        net=None 
     else:
-        output = run_multivariate_gb_regression(net, theta=theta, include_missing=True, reg_type=reg_type, 
-            params = dict(random_state=32, n_estimators=100, min_samples_leaf=2, min_child_samples=1, feature_fraction=0.05, verbosity=-1))
-    print(f'{work_dir}/benchmark/scores/{reg_type}/{str(theta)}/{norm_method}/{grn_model}_{manipulate}.json')
-    with open(f'{work_dir}/benchmark/scores/{reg_type}/{str(theta)}/{norm_method}/{grn_model}_{manipulate}.json', 'w') as f:
+        net = pd.read_csv(f'../output/benchmark/grn_models/{model_name}.csv', index_col=0)
+    
+    # case dependent modifications
+    if model_name == 'positive_control':
+        net = create_positive_control(train_df)
+        net = pd.DataFrame(net, index=gene_names, columns=gene_names)
+        net = net.loc[:, net.columns.isin(tf_all)]
+        
+    elif model_name == 'negative_control':
+        ratio = [.98, .01, 0.01]
+        net = np.random.choice([0, -1, 1], size=((len(gene_names), 400)),p=ratio)
+        net = pd.DataFrame(net, index=gene_names)
+
+    else:
+        net = pivot_grn(net)
+        net = net[net.index.isin(gene_names)]
+        
+    # Subset TFs 
+    if tf_n is None:
+        if False:
+            net_sign = net.values
+            net_sign[net_sign>0]=1
+            net_sign[net_sign<0]=-1
+            net_sign = pd.DataFrame(net_sign, index=net.index, columns=net.columns)
+            degrees = net_sign.abs().sum(axis=0)
+        else:
+            degrees = net.abs().sum(axis=0)
+        net = net.loc[:, degrees>=degrees.quantile((1-theta))]
+    else:
+
+        if tf_n>net.shape[1]:
+
+            print(f'Skip running because tf_n ({tf_n}) is bigger than net.shape[1] ({net.shape[1]})')
+            return 
+        degrees = net.abs().sum(axis=0)
+        net = net[degrees.nlargest(tf_n).index]
+
+    train_df = train_df.T # make it gene*sample
+
+    # manipulate
+    if manipulate=='signed':
+        net = net.map(lambda x: 1 if x>0 else (-1 if x<0 else 0))
+
+
+    output = run_method_1(net, train_df, exclude_missing_genes=exclude_missing_genes, reg_type=reg_type)
+    
+    
+    print(file)
+    with open(file, 'w') as f:
         json.dump(output, f)
+
+def format_folder(work_dir, exclude_missing_genes, reg_type, theta, tf_n, norm_method):
+    return f'{work_dir}/benchmark/scores/exclude_missing_genes_{exclude_missing_genes}/{reg_type}/theta_{theta}_tf_n_{tf_n}/{norm_method}'
+if __name__ == '__main__':
+    set_global_seed(32)
+
+    work_dir = '../output'
+    DATA_DIR = os.path.join('..', 'output', 'preprocess')
+    adata_rna = ad.read_h5ad(os.path.join(DATA_DIR, 'bulk_adata_integrated.h5ad'))
+    gene_names = adata_rna.var.index.to_numpy()
+    tf_all = np.loadtxt(f'{work_dir}/utoronto_human_tfs_v_1.01.txt', dtype=str)
+
+    
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--experiment', type=str, default='theta', help="Type of experiment")
+    parser.add_argument('--exclude-missing-genes', action='store_true', help="Exclude missing genes from evaluation.")
+    parser.add_argument('--force', action='store_true', help="Force overwrite the files")
+    parser.add_argument('--manipulate', type=str, default=None, help="None, signed, shuffle")
+    parser.add_argument('--reg_type', type=str, default='ridge', help="Regression type")
+
+    args = parser.parse_args()
+
+    exclude_missing_genes = args.exclude_missing_genes
+    experiment = args.experiment
+    force = args.force
+    manipulate=args.manipulate
+    reg_type=args.reg_type
+    
+    print(f'{experiment=},{exclude_missing_genes=},{force=}, {manipulate=}')
+
+    grn_model_names = ['negative_control', 'positive_control'] + ['collectRI', 'figr', 'celloracle', 'granie', 'scglue', 'scenicplus']
+    norm_methods = ['pearson','lognorm','scgen_pearson','scgen_lognorm','seurat_pearson','seurat_lognorm'] #['pearson','lognorm','scgen_pearson','scgen_lognorm','seurat_pearson','seurat_lognorm']
+
+    if experiment=='default': # default 
+        theta = 1.0
+        tf_n = None
+        for norm_method in norm_methods:
+            for grn_model in grn_model_names:
+                main(grn_model, reg_type, norm_method, theta, tf_n, exclude_missing_genes, manipulate)
+    elif experiment=='theta': #experiment with thetas
+        thetas = np.linspace(0, 1, 5) # np.linspace(0, 1, 5)
+        tf_n = None
+        reg_type = 'ridge'
+        norm_methods = ['scgen_pearson', 'seurat_lognorm']
+        for grn_model in grn_model_names:
+            for theta in thetas:
+                for norm_method in norm_methods:
+                    main(grn_model, reg_type, norm_method, theta, tf_n, exclude_missing_genes, manipulate)
+    elif experiment=='tf_n':   #experiment with tf_n
+        theta = 1
+        tf_ns = [140, 389, 557]
+        # norm_methods = ['scgen_pearson'] #['pearson','lognorm','scgen_pearson','scgen_lognorm','seurat_pearson','seurat_lognorm']
+        for grn_model in grn_model_names:
+            for tf_n in tf_ns:
+                for norm_method in norm_methods:
+                    main(grn_model, reg_type, norm_method, theta, tf_n, exclude_missing_genes, manipulate)
+    elif False: #single experiment
+        reg_type = 'GB'
+        norm_method = 'scgen_pearson'
+        # theta = 1
+        tf_n = None
+        model_name = 'celloracle'
+        for theta in [1]:
+            main(model_name, reg_type, norm_method, theta, tf_n, exclude_missing_genes, manipulate)
+    else:
+        raise ValueError('define first')
+
+
+# parser = argparse.ArgumentParser()
+# parser.add_argument('--grn-model', type=str, default='collectri', help="GRN model name")
+# parser.add_argument('--norm-method', type=str, default='scgen_pearson', help="Normalization method")
+# parser.add_argument('--reg-type', type=str, default='ridge', help="Regularization type (e.g., 'GB' or 'ridge')")
+# parser.add_argument('--theta', type=float, default=1, help="Theta value")
+# parser.add_argument('--tf-n', type=int, default=None, help="Number of tfs to keep. If given, theta will be ignored.")
+# parser.add_argument('--manipulate', type=str, default=None, help="None, signed, shuffle")
+# parser.add_argument('--exclude-missing-genes', action='store_true', help="Exclude missing genes from evaluation.")
+
+# args = parser.parse_args()
+
+# reg_type = args.reg_type
+# norm_method = args.norm_method
+# theta = args.theta
+# tf_n = args.tf_n
+# exclude_missing_genes = args.exclude_missing_genes
+# print(exclude_missing_genes)
+# manipulate = args.manipulate
+# model_name = args.grn_model
+
+
+
+# class lightgbm_wrapper:
+#     def __init__(self, params):
+#         self.params =  params
+        
+#     def fit_predict(self, X_train, Y_train, X_test):
+#         y_pred_list = []
+#         for i in range(Y_train.shape[1]):
+#             regr = lightgbm.LGBMRegressor(**self.params)
+#             regr.fit(X_train, Y_train[:, i])
+#             y_pred = regr.predict(X_test)
+#             y_pred_list.append(y_pred)
+            
+#         return np.stack(y_pred_list, axis=1)
