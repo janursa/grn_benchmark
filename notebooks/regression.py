@@ -184,15 +184,15 @@ def run_method_1(
     return output
 
 
-def main(model_name: str, reg_type: str, norm_method: str, theta: float, tf_n:int, exclude_missing_genes: bool, manipulate: bool):
+def main(model_name: str, reg_type: str, norm_method: str, theta: float, tf_n:int, exclude_missing_genes: bool, manipulate: bool, subsample=None):
 
     train_data = adata_rna.layers[norm_method]
     train_df = pd.DataFrame(train_data, columns=adata_rna.var_names)
-
-    train_df = train_df.sample(n=200, random_state=42) #TODO: remove this
+    if subsample is not None:
+        train_df = train_df.sample(n=subsample, random_state=42) #TODO: remove this
     # check if the file already exist
     print(f'{reg_type=}, {norm_method=}, {model_name=}, {exclude_missing_genes=}')
-    folder = format_folder(work_dir, exclude_missing_genes, reg_type, theta, tf_n, norm_method)
+    folder = format_folder(work_dir, exclude_missing_genes, reg_type, theta, tf_n, norm_method, subsample)
     os.makedirs(folder, exist_ok=True)
     file = f'{folder}/{model_name}_{manipulate}.json'
 
@@ -256,8 +256,8 @@ def main(model_name: str, reg_type: str, norm_method: str, theta: float, tf_n:in
     with open(file, 'w') as f:
         json.dump(output, f)
 
-def format_folder(work_dir, exclude_missing_genes, reg_type, theta, tf_n, norm_method):
-    return f'{work_dir}/benchmark/scores/exclude_missing_genes_{exclude_missing_genes}/{reg_type}/theta_{theta}_tf_n_{tf_n}/{norm_method}'
+def format_folder(work_dir, exclude_missing_genes, reg_type, theta, tf_n, norm_method, subsample=None):
+    return f'{work_dir}/benchmark/scores/subsample_{subsample}/exclude_missing_genes_{exclude_missing_genes}/{reg_type}/theta_{theta}_tf_n_{tf_n}/{norm_method}'
 if __name__ == '__main__':
     set_global_seed(32)
 
@@ -275,6 +275,7 @@ if __name__ == '__main__':
     parser.add_argument('--force', action='store_true', help="Force overwrite the files")
     parser.add_argument('--manipulate', type=str, default=None, help="None, signed, shuffle")
     parser.add_argument('--reg_type', type=str, default='ridge', help="Regression type")
+    parser.add_argument('--subsample', type=int, default=None, help="Subsample benchamrk data")
 
     args = parser.parse_args()
 
@@ -283,35 +284,42 @@ if __name__ == '__main__':
     force = args.force
     manipulate=args.manipulate
     reg_type=args.reg_type
+    subsample=args.subsample
+
     
-    print(f'{experiment=},{exclude_missing_genes=},{force=}, {manipulate=}')
+    print(f'{experiment=},{exclude_missing_genes=},{force=}, {manipulate=}, {subsample=}')
 
     grn_model_names = ['negative_control', 'positive_control'] + ['collectRI', 'figr', 'celloracle', 'granie', 'scglue', 'scenicplus']
     norm_methods = ['pearson','lognorm','scgen_pearson','scgen_lognorm','seurat_pearson','seurat_lognorm'] #['pearson','lognorm','scgen_pearson','scgen_lognorm','seurat_pearson','seurat_lognorm']
+    if subsample is None: # we run the all the samples only for two datasets
+        norm_methods = ['scgen_pearson',  'seurat_lognorm'] #['pearson','lognorm','scgen_pearson','scgen_lognorm','seurat_pearson','seurat_lognorm']
 
     if experiment=='default': # default 
+        
+
         theta = 1.0
         tf_n = None
         for norm_method in norm_methods:
             for grn_model in grn_model_names:
-                main(grn_model, reg_type, norm_method, theta, tf_n, exclude_missing_genes, manipulate)
+                main(grn_model, reg_type, norm_method, theta, tf_n, exclude_missing_genes, manipulate, subsample)
+    
     elif experiment=='theta': #experiment with thetas
         thetas = np.linspace(0, 1, 5) # np.linspace(0, 1, 5)
         tf_n = None
-        reg_type = 'ridge'
+        
         norm_methods = ['scgen_pearson', 'seurat_lognorm']
         for grn_model in grn_model_names:
             for theta in thetas:
                 for norm_method in norm_methods:
-                    main(grn_model, reg_type, norm_method, theta, tf_n, exclude_missing_genes, manipulate)
+                    main(grn_model, reg_type, norm_method, theta, tf_n, exclude_missing_genes, manipulate, subsample)
     elif experiment=='tf_n':   #experiment with tf_n
         theta = 1
-        tf_ns = [140, 389, 557]
+        tf_ns = [140]
         # norm_methods = ['scgen_pearson'] #['pearson','lognorm','scgen_pearson','scgen_lognorm','seurat_pearson','seurat_lognorm']
-        for grn_model in grn_model_names:
-            for tf_n in tf_ns:
-                for norm_method in norm_methods:
-                    main(grn_model, reg_type, norm_method, theta, tf_n, exclude_missing_genes, manipulate)
+        for norm_method in norm_methods:
+            for grn_model in grn_model_names:
+                for tf_n in tf_ns:
+                    main(grn_model, reg_type, norm_method, theta, tf_n, exclude_missing_genes, manipulate, subsample)
     elif False: #single experiment
         reg_type = 'GB'
         norm_method = 'scgen_pearson'
