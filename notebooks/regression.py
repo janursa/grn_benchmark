@@ -117,7 +117,7 @@ def run_method_1(
         #     ('scaler', StandardScaler()),
         #     ('svc', Ridge(alpha=100, random_state=32))
         # ])
-        regr =  Ridge(**dict(random_state=32, alpha=100))
+        regr =  Ridge(**dict(random_state=32))
     elif reg_type=='GB':
         regr = lightgbm_wrapper(dict(random_state=32, n_estimators=100, min_samples_leaf=2, min_child_samples=1, feature_fraction=0.05, verbosity=-1))
     else:
@@ -295,8 +295,6 @@ if __name__ == '__main__':
         norm_methods = ['scgen_pearson',  'seurat_lognorm'] #['pearson','lognorm','scgen_pearson','scgen_lognorm','seurat_pearson','seurat_lognorm']
 
     if experiment=='default': # default 
-        
-
         theta = 1.0
         tf_n = None
         for norm_method in norm_methods:
@@ -313,7 +311,7 @@ if __name__ == '__main__':
                 for norm_method in norm_methods:
                     main(grn_model, reg_type, norm_method, theta, tf_n, exclude_missing_genes, manipulate, subsample)
     elif experiment=='tf_n':   #experiment with tf_n
-        theta = 1
+        theta = 1.0
         tf_ns = [140]
         # norm_methods = ['scgen_pearson'] #['pearson','lognorm','scgen_pearson','scgen_lognorm','seurat_pearson','seurat_lognorm']
         for norm_method in norm_methods:
