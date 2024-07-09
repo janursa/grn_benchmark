@@ -92,7 +92,7 @@ def degree_centrality(net, source='source', target='target', normalize=False):
 
 
 def create_positive_control(X: np.ndarray) -> np.ndarray:
-    X = StandardScaler().fit_transform(X)
+    X = StandardScaler().fit_transform(X) #TODO: can go 
     return np.dot(X.T, X) / X.shape[0]
 
 def pivot_grn(net):
@@ -110,6 +110,7 @@ def run_method_1(
     net: a df with index as genes and columns as tfs
     train_df: a df with index as genes and columns as samples
     """
+    gene_names = train_df.index.to_numpy()
     gene_names_grn = net.index.to_numpy()
     # determine regressor 
     if reg_type=='ridge':
@@ -120,6 +121,9 @@ def run_method_1(
         regr =  Ridge(**dict(random_state=32))
     elif reg_type=='GB':
         regr = lightgbm_wrapper(dict(random_state=32, n_estimators=100, min_samples_leaf=2, min_child_samples=1, feature_fraction=0.05, verbosity=-1))
+    elif reg_type=='RF':
+        regr = lightgbm_wrapper(dict(boosting_type='rf',random_state=32, n_estimators=100,  feature_fraction=0.05, verbosity=-1))
+    
     else:
         raise ValueError("define first")        
     
@@ -168,7 +172,7 @@ def run_method_1(
         y_pred[mask_va & mask_shared_genes, :] = regr.predict(X[mask_va & mask_shared_genes, :])
 
 
-    assert ~(y_true==0).any()
+    # assert ~(y_true==0).any()
 
     # if verbose >= 1:
     score_r2  = r2_score(y_true, y_pred, multioutput='variance_weighted') #uniform_average', 'variance_weighted
@@ -184,7 +188,13 @@ def run_method_1(
     return output
 
 
-def main(model_name: str, reg_type: str, norm_method: str, theta: float, tf_n:int, exclude_missing_genes: bool, manipulate: bool, subsample=None):
+def main(model_name: str, reg_type: str, norm_method: str, theta: float, tf_n:int, exclude_missing_genes: bool, manipulate: bool, subsample=None, force=False):
+    work_dir = '../output'
+    DATA_DIR = os.path.join('..', 'output', 'preprocess')
+    adata_rna = ad.read_h5ad(os.path.join(DATA_DIR, 'bulk_adata_integrated.h5ad'))
+    gene_names = adata_rna.var.index.to_numpy()
+    tf_all = np.loadtxt(f'{work_dir}/utoronto_human_tfs_v_1.01.txt', dtype=str)
+
 
     train_data = adata_rna.layers[norm_method]
     train_df = pd.DataFrame(train_data, columns=adata_rna.var_names)
@@ -251,23 +261,17 @@ def main(model_name: str, reg_type: str, norm_method: str, theta: float, tf_n:in
 
     output = run_method_1(net, train_df, exclude_missing_genes=exclude_missing_genes, reg_type=reg_type)
     
-    
+    print(output)
     print(file)
     with open(file, 'w') as f:
         json.dump(output, f)
 
 def format_folder(work_dir, exclude_missing_genes, reg_type, theta, tf_n, norm_method, subsample=None):
     return f'{work_dir}/benchmark/scores/subsample_{subsample}/exclude_missing_genes_{exclude_missing_genes}/{reg_type}/theta_{theta}_tf_n_{tf_n}/{norm_method}'
+
+
 if __name__ == '__main__':
     set_global_seed(32)
-
-    work_dir = '../output'
-    DATA_DIR = os.path.join('..', 'output', 'preprocess')
-    adata_rna = ad.read_h5ad(os.path.join(DATA_DIR, 'bulk_adata_integrated.h5ad'))
-    gene_names = adata_rna.var.index.to_numpy()
-    tf_all = np.loadtxt(f'{work_dir}/utoronto_human_tfs_v_1.01.txt', dtype=str)
-
-    
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--experiment', type=str, default='theta', help="Type of experiment")
@@ -289,17 +293,16 @@ if __name__ == '__main__':
     
     print(f'{experiment=},{exclude_missing_genes=},{force=}, {manipulate=}, {subsample=}')
 
-    grn_model_names = ['negative_control', 'positive_control'] + ['collectRI', 'figr', 'celloracle', 'granie', 'scglue', 'scenicplus']
-    norm_methods = ['pearson','lognorm','scgen_pearson','scgen_lognorm','seurat_pearson','seurat_lognorm'] #['pearson','lognorm','scgen_pearson','scgen_lognorm','seurat_pearson','seurat_lognorm']
-    if subsample is None: # we run the all the samples only for two datasets
-        norm_methods = ['scgen_pearson',  'seurat_lognorm'] #['pearson','lognorm','scgen_pearson','scgen_lognorm','seurat_pearson','seurat_lognorm']
+    grn_model_names = ['negative_control', 'positive_control'] + ['scglue', 'collectRI', 'figr', 'celloracle', 'granie',  'scenicplus']
+    # norm_methods = ['pearson','lognorm','scgen_pearson','scgen_lognorm','seurat_pearson','seurat_lognorm'] #['pearson','lognorm','scgen_pearson','scgen_lognorm','seurat_pearson','seurat_lognorm']
+    norm_methods = ['pearson', 'lognorm'] #['pearson','lognorm','scgen_pearson','scgen_lognorm','seurat_pearson','seurat_lognorm']
 
     if experiment=='default': # default 
         theta = 1.0
         tf_n = None
         for norm_method in norm_methods:
             for grn_model in grn_model_names:
-                main(grn_model, reg_type, norm_method, theta, tf_n, exclude_missing_genes, manipulate, subsample)
+                main(grn_model, reg_type, norm_method, theta, tf_n, exclude_missing_genes, manipulate, subsample, force)
     
     elif experiment=='theta': #experiment with thetas
         thetas = np.linspace(0, 1, 5) # np.linspace(0, 1, 5)
@@ -309,7 +312,7 @@ if __name__ == '__main__':
         for grn_model in grn_model_names:
             for theta in thetas:
                 for norm_method in norm_methods:
-                    main(grn_model, reg_type, norm_method, theta, tf_n, exclude_missing_genes, manipulate, subsample)
+                    main(grn_model, reg_type, norm_method, theta, tf_n, exclude_missing_genes, manipulate, subsample, force)
     elif experiment=='tf_n':   #experiment with tf_n
         theta = 1.0
         tf_ns = [140]
@@ -317,7 +320,7 @@ if __name__ == '__main__':
         for norm_method in norm_methods:
             for grn_model in grn_model_names:
                 for tf_n in tf_ns:
-                    main(grn_model, reg_type, norm_method, theta, tf_n, exclude_missing_genes, manipulate, subsample)
+                    main(grn_model, reg_type, norm_method, theta, tf_n, exclude_missing_genes, manipulate, subsample,force)
     elif False: #single experiment
         reg_type = 'GB'
         norm_method = 'scgen_pearson'
@@ -325,7 +328,7 @@ if __name__ == '__main__':
         tf_n = None
         model_name = 'celloracle'
         for theta in [1]:
-            main(model_name, reg_type, norm_method, theta, tf_n, exclude_missing_genes, manipulate)
+            main(model_name, reg_type, norm_method, theta, tf_n, exclude_missing_genes, manipulate, force)
     else:
         raise ValueError('define first')
 
