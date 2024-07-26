@@ -196,7 +196,7 @@ def main(model_name: str, reg_type: str, norm_method: str, theta: float, tf_n:in
     tf_all = np.loadtxt(f'{work_dir}/utoronto_human_tfs_v_1.01.txt', dtype=str)
 
 
-    train_data = adata_rna.layers[norm_method]
+    train_data = adata_rna.layers[norm_method].copy()
     train_df = pd.DataFrame(train_data, columns=adata_rna.var_names)
     if subsample is not None:
         train_df = train_df.sample(n=subsample, random_state=42) #TODO: remove this
@@ -291,7 +291,7 @@ if __name__ == '__main__':
     subsample=args.subsample
 
     
-    print(f'{experiment=},{exclude_missing_genes=},{force=}, {manipulate=}, {subsample=}')
+    print(f'{experiment=}, {exclude_missing_genes=}, {force=}, {manipulate=}, {subsample=}')
 
     grn_model_names = ['negative_control', 'positive_control'] + ['scglue', 'collectRI', 'figr', 'celloracle', 'granie',  'scenicplus']
     # norm_methods = ['pearson','lognorm','scgen_pearson','scgen_lognorm','seurat_pearson','seurat_lognorm'] #['pearson','lognorm','scgen_pearson','scgen_lognorm','seurat_pearson','seurat_lognorm']
@@ -308,7 +308,6 @@ if __name__ == '__main__':
         thetas = np.linspace(0, 1, 5) # np.linspace(0, 1, 5)
         tf_n = None
         
-        norm_methods = ['scgen_pearson', 'seurat_lognorm']
         for grn_model in grn_model_names:
             for theta in thetas:
                 for norm_method in norm_methods:
@@ -316,7 +315,6 @@ if __name__ == '__main__':
     elif experiment=='tf_n':   #experiment with tf_n
         theta = 1.0
         tf_ns = [140]
-        # norm_methods = ['scgen_pearson'] #['pearson','lognorm','scgen_pearson','scgen_lognorm','seurat_pearson','seurat_lognorm']
         for norm_method in norm_methods:
             for grn_model in grn_model_names:
                 for tf_n in tf_ns:
