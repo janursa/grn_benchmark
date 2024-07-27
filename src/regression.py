@@ -14,7 +14,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_squared_error
 import lightgbm
 import random 
-
+from commons import format_folder
 
 def set_global_seed(seed):
     np.random.seed(seed)
@@ -23,26 +23,26 @@ def set_global_seed(seed):
 
 
 
-# class lightgbm_wrapper:
-#     def __init__(self, params):
-#         self.params =  params
+class lightgbm_wrapper_simple:
+    def __init__(self, params):
+        self.params =  params
         
-#     def fit(self, X_train, Y_train):
-#         self.n_sample = Y_train.shape[1]
-#         self.regr_samples = []
-#         for i in range(self.n_sample):
-#             regr = lightgbm.LGBMRegressor(**self.params)
-#             regr.fit(X_train, Y_train[:, i])
-#             self.regr_samples.append(regr)
+    def fit(self, X_train, Y_train):
+        self.n_sample = Y_train.shape[1]
+        self.regr_samples = []
+        for i in range(self.n_sample):
+            regr = lightgbm.LGBMRegressor(**self.params)
+            regr.fit(X_train, Y_train[:, i])
+            self.regr_samples.append(regr)
             
             
-#     def predict(self,X_test):
-#         y_pred_list = []
-#         for i in range(self.n_sample):
-#             regr = self.regr_samples[i]
-#             y_pred = regr.predict(X_test)
-#             y_pred_list.append(y_pred)
-#         return np.stack(y_pred_list, axis=1)
+    def predict(self,X_test):
+        y_pred_list = []
+        for i in range(self.n_sample):
+            regr = self.regr_samples[i]
+            y_pred = regr.predict(X_test)
+            y_pred_list.append(y_pred)
+        return np.stack(y_pred_list, axis=1)
 from concurrent.futures import ThreadPoolExecutor
 
 class lightgbm_wrapper:
@@ -266,8 +266,6 @@ def main(model_name: str, reg_type: str, norm_method: str, theta: float, tf_n:in
     with open(file, 'w') as f:
         json.dump(output, f)
 
-def format_folder(work_dir, exclude_missing_genes, reg_type, theta, tf_n, norm_method, subsample=None):
-    return f'{work_dir}/benchmark/scores/subsample_{subsample}/exclude_missing_genes_{exclude_missing_genes}/{reg_type}/theta_{theta}_tf_n_{tf_n}/{norm_method}'
 
 
 if __name__ == '__main__':
@@ -329,40 +327,3 @@ if __name__ == '__main__':
             main(model_name, reg_type, norm_method, theta, tf_n, exclude_missing_genes, manipulate, force)
     else:
         raise ValueError('define first')
-
-
-# parser = argparse.ArgumentParser()
-# parser.add_argument('--grn-model', type=str, default='collectri', help="GRN model name")
-# parser.add_argument('--norm-method', type=str, default='scgen_pearson', help="Normalization method")
-# parser.add_argument('--reg-type', type=str, default='ridge', help="Regularization type (e.g., 'GB' or 'ridge')")
-# parser.add_argument('--theta', type=float, default=1, help="Theta value")
-# parser.add_argument('--tf-n', type=int, default=None, help="Number of tfs to keep. If given, theta will be ignored.")
-# parser.add_argument('--manipulate', type=str, default=None, help="None, signed, shuffle")
-# parser.add_argument('--exclude-missing-genes', action='store_true', help="Exclude missing genes from evaluation.")
-
-# args = parser.parse_args()
-
-# reg_type = args.reg_type
-# norm_method = args.norm_method
-# theta = args.theta
-# tf_n = args.tf_n
-# exclude_missing_genes = args.exclude_missing_genes
-# print(exclude_missing_genes)
-# manipulate = args.manipulate
-# model_name = args.grn_model
-
-
-
-# class lightgbm_wrapper:
-#     def __init__(self, params):
-#         self.params =  params
-        
-#     def fit_predict(self, X_train, Y_train, X_test):
-#         y_pred_list = []
-#         for i in range(Y_train.shape[1]):
-#             regr = lightgbm.LGBMRegressor(**self.params)
-#             regr.fit(X_train, Y_train[:, i])
-#             y_pred = regr.predict(X_test)
-#             y_pred_list.append(y_pred)
-            
-#         return np.stack(y_pred_list, axis=1)
