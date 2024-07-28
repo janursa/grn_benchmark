@@ -6,6 +6,7 @@
 /output*
 /kaggle
 notebooks/.pybiomart.sqlite
+src/__pycache__/
 input/
 test/
 notebooks/__pycache__/
