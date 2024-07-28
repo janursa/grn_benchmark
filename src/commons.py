@@ -104,3 +104,6 @@ def sign_grn(grn):
 
 
 
+if False:
+    collectRI = pd.read_csv("https://github.com/pablormier/omnipath-static/raw/main/op/collectri-26.09.2023.zip")
+    collectRI.to_csv(f'{work_dir}/collectri.csv')
