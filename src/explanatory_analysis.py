@@ -48,6 +48,15 @@ def calculate_hvgs_stats(geneset, hvgs, pert_genes):
     top_p = ((np.asarray(random_ratios)>shared_hvgs_ratio).sum()/n_random)*100
 
     return {'n_included_hvgs':shared_hvgs_n, 'ratio':shared_hvgs_ratio, 'percentile_rank':round(top_p,1)} 
+def annotate_genes(targets, gene_annotation_df):
+    gene_annot = gene_annotation_df[gene_annotation_df.Gene.isin(targets)].Transcript_type.value_counts()
+        
+    gene_annot = round(gene_annot*100/len(targets),1)
+    mask_rest = gene_annot<1
+    sum_rest = gene_annot[mask_rest].sum()
+    gene_annot = gene_annot[~mask_rest]
+    gene_annot.loc['Rest'] = round(sum_rest,1)
+    return gene_annot
 class Explanatory_analysis:
     '''
     This class provides functions for explanatory analysis of GRNs including topology analysis and biological annotaions.
@@ -136,9 +145,10 @@ class Explanatory_analysis:
         return formatted_peaks
     def annotate_genes(self, gene_annotation_df) -> dict[str, float]:
         '''Annotates genes'''
-        gene_annot = gene_annotation_df[gene_annotation_df.Gene.isin(self.targets)].Transcript_type.value_counts().to_dict()
-        # gene_annot.values
-        self.gene_annot = {key:round((value*100/len(self.targets)), 1) for key, value in gene_annot.items()}
-        return self.gene_annot
+        targets = self.targets
+        self.gene_annot = annotate_genes(targets, gene_annotation_df)
+        return self.gene_annot.to_dict()
+
+    
     
    
