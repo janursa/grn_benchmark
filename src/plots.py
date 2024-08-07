@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 import numpy as np
-
+import matplotlib
 
 colors_cell_type = ['#c4d9b3', '#c5bc8e', '#c49e81', '#c17d88', 'gray', 'lightsteelblue']
 colors_blind = [
@@ -43,9 +43,9 @@ def plot_bar(data_dict: dict[str, np.array], title: str=''):
     aa = plt.xticks(rotation=45)
 
 
-def plot_umap(adata, color='', palette=None, ax=None, 
+def plot_umap(adata, color='', palette=None, ax=None, X_label='X_umap',
               bbox_to_anchor=None, legend=True, legend_title='', **kwrds):
-    latent = adata.obsm['X_umap']
+    latent = adata.obsm[X_label]
     var_unique_sorted = sorted(adata.obs[color].unique())
     legend_handles = []
     
@@ -84,7 +84,62 @@ def plot_umap(adata, color='', palette=None, ax=None,
         # legend._legend_box.set_spacing(2)  # Increase the spacing between the title and entries
 
 
-def plot_stratified_scatter(obs, ax, xs, ys, size=4, palette=None, x_label='', y_label='', log_x=False, log_y=False, extra_labels=None, bbox_to_anchor=(1,1)):
+
+
+def plot_scatter(obs, obs_index, xs, ys, x_label='', y_label='', log=True, log_y=False, figsize=(5, 7)):
+    """
+        Scatter plot to showcase the distribution of given variables across different groups. 
+    """
+    n_axes = len(obs_index)
+    fig, axes = plt.subplots(1, 2, figsize=figsize, sharey=False)
+    alpha = .6
+    size = 4
+    for i_index, index in enumerate(obs_index):
+        # i = i_index // n_axes
+        j = i_index % n_axes
+        ax = axes[j]
+
+        index_vars = obs[index]
+        
+        if (index=='sm_name'):
+            # included_vars = train_sm_names
+            # included_vars = index_vars.unique()
+            mask = (index_vars.isin(controls2))
+            ax.scatter(xs[~mask], ys[~mask], label='Rest', alpha=alpha, color='blue', s=size-1)
+            mask = (index_vars.isin(controls2))
+            ax.scatter(xs[mask], ys[mask], label='Positive control', alpha=alpha, color='cyan', s=size)
+            
+        else:
+            included_vars = index_vars.unique()
+            for i, var in enumerate(included_vars):
+                label = var
+                mask = (index_vars == var)
+                ax.scatter(xs[mask], ys[mask], label=var, alpha=alpha, color=colors_cell_type[i], s=size)
+
+        ax.grid(alpha=0.4, linewidth=1, color='grey', linestyle='--')
+        ax.set_xlabel(x_label)
+        ax.set_ylabel(y_label)
+        if log:
+            ax.set_xscale('log')
+        if log_y:
+            ax.set_yscale('log')
+        ax.margins(0.05)
+        ax.spines[['right', 'top']].set_visible(False)
+        # ax.grid(alpha=0.4, linestyle='--', linewidth=0.5, color='grey')
+        prop = {'size': 9}
+        
+        handles = []
+        for kk, label in enumerate(included_vars if (index != 'sm_name') else ['Rest', 'Positive control']):
+            if index == 'sm_name':
+                handles.append(Patch(facecolor=colors_positive_controls[kk], label=label))
+            else:
+                handles.append(Patch(facecolor=colors_cell_type[kk], label=label))
+        
+        ax.legend(handles=handles, prop=prop, bbox_to_anchor=(1, 1), loc='upper left', borderaxespad=0, frameon=False)
+    plt.tight_layout()
+    return fig, axes
+    
+def plot_stratified_scatter(obs, ax, xs, ys, palette, size=4,  x_label='', y_label='', log_x=False, log_y=False, extra_labels=None, bbox_to_anchor=(1,1)):
     """
         Scatter plot to showcase the distribution of a given variable across different groups. 
     """
@@ -124,3 +179,50 @@ def plot_stratified_scatter(obs, ax, xs, ys, size=4, palette=None, x_label='', y
 
     # Customize grid lines
     ax.tick_params(axis='both', which='both', width=0.5, length=2)  # Adjust the tick thickness here
+
+
+
+
+## Common functions 
+def plot_stacked_bar_chart(cell_types_in_drops, title='', xticks=None, 
+                           xticklabels=None, colors=None, figsize=(25, 4), 
+                           ax=None, legend=False, color_map=None):
+    """
+        Stacked bar plot to showcase the compound based distribution of cell counts. Adopted from AmbrosM. 
+    """
+    # Add a column of zeros to the left and compute the cumulative sums
+    cc = np.hstack([np.zeros((len(cell_types_in_drops), 1)), cell_types_in_drops])
+    cc_cs = cc.cumsum(axis=1)
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize)
+    else:
+        fig = None
+    cell_types = cell_types_in_drops.columns
+    for i, cell_type in enumerate(cell_types):
+        if color_map is None:
+            color=colors_cell_type[i]
+        else:
+            color=color_map[cell_type]
+        ax.bar(np.arange(len(cc_cs)),
+               cc_cs[:,i+1] - cc_cs[:,i],
+               bottom=cc_cs[:,i],
+               label=cell_types[i], color=color)
+         
+    ax.set_title(title)
+    if xticks is not None:
+        ax.set_xticks(xticks)
+    else:
+        ax.set_xticks(np.arange(len(cc_cs)))
+    if xticklabels is not None:
+        ax.set_xticklabels(xticklabels, rotation=90)
+    if colors is not None:
+        for ticklabel, color in zip(ax.get_xticklabels(), colors):
+            ticklabel.set_color(color)
+    if legend: 
+        ax.legend()
+    color_legend_handles = [
+        matplotlib.patches.Patch(facecolor='red', label='-'),
+        matplotlib.patches.Patch(facecolor='blue', label='-'),
+        matplotlib.patches.Patch(facecolor='green', label='-'),
+    ]
+    return fig, ax

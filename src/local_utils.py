@@ -50,3 +50,17 @@ def run_classifier(adata, layer, batch_key):
     score = 1 - cross_validate(model, X, y, cv=5, scoring=scoring, return_train_score=False)['test_accuracy_score'].mean()
     
     return pd.DataFrame({'Batch classifier':[score]})
+
+
+def isolation_forest(df_subset, group=['index'], cell_type_col='cell_type', values_col='cell_count'):
+    """
+        Identifies outlier compounds based on ratio of cell type in pseudobulked samples. 
+    """
+    from sklearn.ensemble import IsolationForest
+    cell_count_m = df_subset.pivot(index=group, columns=cell_type_col, values=values_col)
+    cell_count_ratio = cell_count_m.div(cell_count_m.sum(axis=1), axis=0)
+    cell_count_ratio = cell_count_ratio.fillna(0)
+    clf = IsolationForest(max_samples=100, random_state=0)
+    clf.fit(cell_count_ratio.values)
+    outlier_compounds = cell_count_ratio.index[clf.predict(cell_count_ratio.values)==-1]
+    return outlier_compounds

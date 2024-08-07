@@ -4,7 +4,38 @@ import numpy as np
 import anndata as ad
 import matplotlib.pyplot as plt
 
+def calculate_percentile_rank(data, mask_group:list[bool]) -> dict[str, float]:
+    '''
+        Calculate ranks of the group with the given True values in the mask_group to 1000 random selection of same size by 
+        taking sum of top quantile values. 
+    '''
+    # stats
+    n_occurance = (mask_group).sum()
+    n_samples = data.shape[0]
+    p=[n_occurance/n_samples,  (n_samples-n_occurance)/n_samples]
+    # make all expression positive
+    X = data
+    X += np.abs(np.min(np.min(X)))
 
+    qr_scores = []
+    for tt in np.linspace(0.9, .99, 10):
+        quantile_per_gene = np.quantile(X, tt, axis=0)
+        top_qq_sum = []
+        for i_row, row in enumerate(X):
+            top_qq_sum.append((row>quantile_per_gene).sum())
+        top_qq_sum = np.asarray(top_qq_sum)
+              
+        # mask the group
+        top_qq_ctr_sum = top_qq_sum[mask_group].sum()
+        # mask random
+        top_qq_random_sum_list = []
+        for i in range(1000):
+            mask = np.random.choice([True, False], n_samples, p=p)
+            top_qq_random_sum_list.append(top_qq_sum[mask].sum())
+        score = round(((top_qq_random_sum_list>top_qq_ctr_sum).sum()/1000)*100, 3)        
+        qr_scores.append(score)
+    
+    return np.mean(qr_scores)
 def degree_centrality(net, source='source', target='target', normalize=False):
     counts = net.groupby(source)[target].nunique().values
     if normalize:
@@ -12,24 +43,6 @@ def degree_centrality(net, source='source', target='target', normalize=False):
         counts = counts/total_targets
     return counts
 
-def plot_cumulative_density(data, title='', ax=None, s=1, **kwdgs):
-    # Step 1: Sort the data
-    sorted_data = np.sort(data)
-    
-    # Step 2: Compute the cumulative density values
-    cdf = np.arange(1, len(sorted_data) + 1) / len(sorted_data)
-    
-    # Step 3: Plot the data
-    if ax is None:
-    	fig, ax = plt.subplots(1, 1, figsize=(4, 4))
-    else:
-    	fig = None
-    ax.step(sorted_data, cdf, where='post', label=title, **kwdgs)
-    ax.set_xlabel('Data')
-    ax.set_ylabel('Cumulative Density')
-    ax.set_title(title)
-    # ax.grid(True)
-    return fig, ax
 class Connectivity:
     def __init__(self, net, **kwargs):
         self.out_deg = degree_centrality(net, source='source', target='target',  **kwargs)
