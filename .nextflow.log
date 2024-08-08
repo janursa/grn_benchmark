@@ -1,0 +1,21 @@
+Aug-07 17:32:20.717 [main] DEBUG nextflow.cli.Launcher - $> nextflow run . -main-script target/nextflow/workflows/process_perturbation/main.nf -profile docker -with-trace -c src/common/nextflow_helpers/labels_ci.config --id test --perturbation_counts resources/datasets_raw/perturbation_counts.h5ad --perturbation_data resources/grn-benchmark/perturbation_data.h5ad --output_state state.yaml --publish_dir ./
+Aug-07 17:32:20.792 [main] INFO  nextflow.cli.CmdRun - N E X T F L O W  ~  version 23.10.4
+Aug-07 17:32:20.819 [main] DEBUG nextflow.plugin.PluginsFacade - Setting up plugin manager > mode=prod; embedded=false; plugins-dir=/root/.nextflow/plugins; core-plugins: nf-amazon@2.1.4-patch3,nf-azure@1.3.3-patch3,nf-cloudcache@0.3.0-patch1,nf-codecommit@0.1.5-patch2,nf-console@1.0.6-patch1,nf-ga4gh@1.1.0-patch1,nf-google@1.8.3-patch2,nf-tower@1.6.3-patch1,nf-wave@1.0.1-patch1
+Aug-07 17:32:20.842 [main] INFO  o.pf4j.DefaultPluginStatusProvider - Enabled plugins: []
+Aug-07 17:32:20.844 [main] INFO  o.pf4j.DefaultPluginStatusProvider - Disabled plugins: []
+Aug-07 17:32:20.847 [main] INFO  org.pf4j.DefaultPluginManager - PF4J version 3.12.0 in 'deployment' mode
+Aug-07 17:32:20.874 [main] INFO  org.pf4j.AbstractPluginManager - No plugins
+Aug-07 17:32:20.896 [main] DEBUG nextflow.scm.ProviderConfig - Using SCM config path: /root/.nextflow/scm
+Aug-07 17:32:20.903 [main] DEBUG nextflow.scm.AssetManager - Listing projects in folder: /root/.nextflow/assets
+Aug-07 17:32:20.916 [main] DEBUG nextflow.cli.Launcher - Operation aborted
+nextflow.exception.AmbiguousPipelineNameException: Which one do you mean?
+nextflow-io/.git
+nextflow-io/.github
+	at nextflow.scm.AssetManager.resolveName(AssetManager.groovy:294)
+	at nextflow.scm.AssetManager.build(AssetManager.groovy:126)
+	at nextflow.scm.AssetManager.<init>(AssetManager.groovy:104)
+	at nextflow.cli.CmdRun.getScriptFile0(CmdRun.groovy:521)
+	at nextflow.cli.CmdRun.getScriptFile(CmdRun.groovy:462)
+	at nextflow.cli.CmdRun.run(CmdRun.groovy:317)
+	at nextflow.cli.Launcher.run(Launcher.groovy:500)
+	at nextflow.cli.Launcher.main(Launcher.groovy:672)
