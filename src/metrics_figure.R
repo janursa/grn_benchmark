@@ -1,10 +1,28 @@
 library(tidyverse)
 library(funkyheatmap)
 
-source("helpers.R")
+library(rprojroot)
+
+# Get the directory of the current script
+script_dir <- dirname(rprojroot::thisfile())
 
 
-summary_all <- read_tsv("summary_all.tsv") 
+# Source the helpers.R from the same directory
+source(file.path(script_dir, "helpers.R"))
+
+args <- commandArgs(trailingOnly = TRUE)
+
+# Check if a file path is provided
+if (length(args) == 0) {
+  stop("Please provide a file path to the summary file.")
+}
+
+# Read the provided file path from the command line
+file_path <- args[1] #summary_all.tsv 
+to_save <- args[2] #"figure.pdf"
+
+# Read the TSV file using the provided file path
+summary_all <- read_tsv(file_path)
 
 ##################################################
 # FIGURE 3a
@@ -17,30 +35,12 @@ column_info <-
     tribble(
       ~id, ~id_color, ~name, ~group, ~geom, ~palette, ~options,
       "method_name", NA_character_, "Name", "method", "text", NA_character_, list(width = 10, hjust = 0),
-      "overall_score", "overall_score_rank", "Score", "overall", "bar", "overall", list(width = 4),
+      "overall_score", "overall_score", "Score", "overall", "bar", "overall", list(width = 4),
+      "ex(False)_tf(-1)", "ex(False)_tf(-1)", "S11", "metric_1", "funkyrect",  "metric_1", list(width = 2),
+      "ex(True)_tf(-1)", "ex(True)_tf(-1)", "S12", "metric_1", "funkyrect",  "metric_1", list(width = 2),
+      "static-theta-0.0", "static-theta-0.0", "theta==min", "metric_2", "funkyrect",  "metric_2", list(width = 2),
+      "static-theta-0.5", "static-theta-0.5", "theta==median", "metric_2", "funkyrect",  "metric_2", list(width = 2),      
     ),
-    tribble(
-      ~id, ~name,
-      "accuracy_reg_1", "Accuracy",
-      "completeness_reg_1", "Completeness",
-    ) %>%
-      mutate(
-        id_color = paste0(id, "_rank"),
-        group = "metric",
-        geom = "funkyrect",
-        palette = "metric"
-      ),
-    tribble(
-      ~id, ~name,
-      "accuracy_reg_2", "Accuracy",
-      "completeness_reg_2", "Completeness",
-    ) %>%
-      mutate(
-        id_color = paste0(id, "_rank"),
-        group = "stability",
-        geom = "funkyrect",
-        palette = "stability"
-      ),
     tribble(
       ~id, ~name, ~geom,
       "mean_cpu_pct_scaled", "%CPU", "funkyrect",
@@ -64,24 +64,22 @@ column_info <-
       })
     )
   )
-
+print(column_info)
 # create column groups
 column_groups <- tribble(
   ~group, ~palette, ~level1,
   "method", NA_character_, "",
   "overall", "overall", "Overall",
-  # "dataset", "dataset", "Datasets",
-  "metric", "metric", "Metrics",
-  "stability", "stability", "Stability",
+  "metric_1", "metric_1", "Regression 1",
+  "metric_2", "metric_2", "Regression 2",
   "resources", "resources", "Resources"
 )
 
 # create palettes
 palettes <- list(
   overall = "Greys",
-  # dataset = "Blues",
-  metric = "Reds",
-  stability = "Greens",
+  metric_1 = "Blues",
+  metric_2 = "Reds",
   resources = "YlOrBr"
 )
 
@@ -103,8 +101,8 @@ legends <- list(
     size = c(0, seq(0, 1, by = .1)),
     label_hjust = rep(.5, 12)
   ),
-  list(palette = "metric", enabled = FALSE),
-  list(palette = "stability", enabled = FALSE),
+  list(palette = "metric_1", enabled = FALSE),
+  list(palette = "metric_2", enabled = FALSE),
   list(
     title = "Resources",
     palette = "resources",
@@ -134,7 +132,7 @@ g3 <- funky_heatmap(
   legends = legends
 )
 ggsave(
-  "figure3.pdf",
+  to_save,
   g3,
   width = g3$width,
   height = g3$height
