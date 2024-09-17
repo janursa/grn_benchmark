@@ -10,6 +10,5 @@ src/__pycache__/
 input/
 test/
 notebooks/__pycache__/
-draw/
 resources/
-draw/pngs/*
+draw/pngs/
