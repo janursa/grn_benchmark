@@ -43,13 +43,13 @@ column_info <-
     ),
     tribble(
       ~id, ~name, ~geom,
-      "mean_cpu_pct_scaled", "%CPU", "funkyrect",
+      # "mean_cpu_pct_scaled", "%CPU", "funkyrect",
       "mean_peak_memory_log_scaled", "Peak memory", "rect",
       "mean_peak_memory_str", "", "text",
-      "mean_disk_read_log_scaled", "Disk read", "rect",
-      "mean_disk_read_str", "", "text",
-      "mean_disk_write_log_scaled", "Disk write", "rect",
-      "mean_disk_write_str", "", "text",
+      # "mean_disk_read_log_scaled", "Disk read", "rect",
+      # "mean_disk_read_str", "", "text",
+      # "mean_disk_write_log_scaled", "Disk write", "rect",
+      # "mean_disk_write_str", "", "text",
       "mean_duration_log_scaled", "Duration", "rect",
       "mean_duration_str", "", "text"
     ) %>% mutate(
