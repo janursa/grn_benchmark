@@ -36,22 +36,17 @@ column_info <-
       ~id, ~id_color, ~name, ~group, ~geom, ~palette, ~options,
       "method_name", NA_character_, "Name", "method", "text", NA_character_, list(width = 10, hjust = 0),
       "overall_score", "overall_score", "Score", "overall", "bar", "overall", list(width = 4),
-      "ex(False)_tf(-1)", "ex(False)_tf(-1)", "S11", "metric_1", "funkyrect",  "metric_1", list(width = 2),
-      "ex(True)_tf(-1)", "ex(True)_tf(-1)", "S12", "metric_1", "funkyrect",  "metric_1", list(width = 2),
-      "static-theta-0.0", "static-theta-0.0", "theta==min", "metric_2", "funkyrect",  "metric_2", list(width = 2),
-      "static-theta-0.5", "static-theta-0.5", "theta==median", "metric_2", "funkyrect",  "metric_2", list(width = 2),      
+      "S1", "S1", "S1", "metric_1", "funkyrect",  "metric_1", list(width = 2),
+      "S2", "S2", "S2", "metric_1", "funkyrect",  "metric_1", list(width = 2),
+      "static-theta-0.0", "static-theta-0.0", "Theta (min)", "metric_2", "funkyrect",  "metric_2", list(width = 2),
+      "static-theta-0.5", "static-theta-0.5", "Theta (median)", "metric_2", "funkyrect",  "metric_2", list(width = 2),      
     ),
     tribble(
       ~id, ~name, ~geom,
-      "mean_cpu_pct_scaled", "%CPU", "funkyrect",
-      "mean_peak_memory_log_scaled", "Peak memory", "rect",
-      "mean_peak_memory_str", "", "text",
-      "mean_disk_read_log_scaled", "Disk read", "rect",
-      "mean_disk_read_str", "", "text",
-      "mean_disk_write_log_scaled", "Disk write", "rect",
-      "mean_disk_write_str", "", "text",
-      "mean_duration_log_scaled", "Duration", "rect",
-      "mean_duration_str", "", "text"
+      "memory_log", "Peak memory (GB)", "rect",
+      "memory_str", "", "text",
+      "duration_log", "Duration (hour)", "rect",
+      "duration_str", "", "text"
     ) %>% mutate(
       group = "resources",
       palette = ifelse(geom == "text", NA_character_, "resources"),
@@ -59,7 +54,7 @@ column_info <-
         if (geom == "text") {
           list(overlay = TRUE, size = 2.5)
         } else {
-          list()
+          list(width = 2)
         }
       })
     )
@@ -134,6 +129,6 @@ g3 <- funky_heatmap(
 ggsave(
   to_save,
   g3,
-  width = g3$width,
-  height = g3$height
+  width = g3$width +2,
+  height = g3$height + 2
 )
