@@ -35,7 +35,7 @@ COLORS = {
     'CollectRI': '#83b17b',
     'FigR': '#56B4E9',
     'CellOracle': '#b0b595',
-    'GRANIE': '#009E73',
+    'GRaNIE': '#009E73',
     'ANANSE': '#e2b1cd',
     'scGLUE': '#D55E00',
     'Scenic+': '#dfc2e5',
@@ -43,7 +43,11 @@ COLORS = {
     'Positive': 'darkblue',
     'Negative': 'indianred',
     'Positive Control': 'darkblue',
-    'Negative Control': 'indianred'
+    'Negative Control': 'indianred',
+    'GRNBoost2': '#e2b1cd',
+    'GENIE3': '#009E73',
+    'Pearson corr.': '#56B4E9',
+    
 }
 
 LINESTYLES = {
@@ -52,10 +56,13 @@ LINESTYLES = {
     'CollectRI': '--',
     'FigR': '-.',
     'CellOracle': ':',
-    'GRANIE': ':',
+    'GRaNIE': ':',
     'ANANSE': '--',
     'scGLUE': '-.',
     'Scenic+': '-',
+    'GRNBoost2': '--',
+    'GENIE3': '-.',
+    'Pearson corr.': '-' 
 }
 
 MARKERS = {
@@ -63,12 +70,15 @@ MARKERS = {
     'CollectRI': '.',
     'FigR': 'o',
     'CellOracle': 'd',
-    'GRANIE': 'v',
+    'GRaNIE': 'v',
     'ANANSE': 's',
     'scGLUE': 'x',
     'Scenic+': '*',
     'Positive Control': '.',
-    'Negative Control': '.'
+    'Negative Control': '.',
+    'GRNBoost2': 'x',
+    'GENIE3': 'v',
+    'Pearson corr.': '-' 
 }
 
 surragate_names = {'CollectRI': 'CollectRI', 'collectRI':'CollectRI', 'collectRI_sign':'CollectRI-signs', 'collectri': 'CollectRI',
@@ -81,9 +91,13 @@ surragate_names = {'CollectRI': 'CollectRI', 'collectRI':'CollectRI', 'collectRI
                    'portia':'Portia',
                    'baseline':'Baseline',
                    'cov_net': 'Pearson cov',
-                   'granie':'GRANIE',
+                   'granie':'GRaNIE',
                    'ananse':'ANANSE',
                    'scglue':'scGLUE',
+                   'pearson_corr': 'Pearson corr.',
+                   'grnboost2': 'GRNBoost2',
+                   'genie3': 'GENIE3',
+                   'scenic': 'Scenic',
                    
                    'positive_control':'Positive Control',
                    'negative_control':'Negative Control',
@@ -94,6 +108,11 @@ surragate_names = {'CollectRI': 'CollectRI', 'collectRI':'CollectRI', 'collectRI
                    'seurat_lognorm': 'Seurat-SLA',
                    'scgen_lognorm': 'scGEN-SLA',
                    'scgen_pearson': 'scGEN-APR',
+                   'static-theta-0.0': r'$\theta$=min', 
+                    'static-theta-0.5': r'$\theta$=median', 
+                    'static-theta-1.0': r'$\theta$=max',
+                    'S1': 'S1',
+                    'S2': 'S2'
                    }
 controls3 = ['Dabrafenib', 'Belinostat', 'Dimethyl Sulfoxide']
 CELL_TYPES = ['NK cells', 'T cells CD4+', 'T cells CD8+', 'T regulatory cells', 'B cells', 'Myeloid cells']
@@ -104,24 +123,6 @@ cell_type_map = {cell_type: 'T cells' if cell_type in T_cell_types else cell_typ
 cell_types = ['NK cells', 'T cells', 'B cells', 'Myeloid cells']
 
 
-def shuffle_grn(grn):
-    grn_s = grn.copy()
-    grn_s['source'] = grn_s['source'].sample(frac=1).reset_index(drop=True)
-    grn_s['target'] = grn_s['target'].sample(frac=1).reset_index(drop=True)
-    dup_flags = grn_s[['source','target']].duplicated()
-    grn_s = grn_s[~dup_flags].reset_index(drop=True)
-    if grn_s.duplicated().sum()>0:
-        raise ValueError('')
-    return grn_s
-def sign_grn(grn):
-    grn_sign = grn.copy()
-    weights = grn_sign.weight
-    weights = [1 if weight>0 else -1 for weight in weights]
-    grn_sign.weight = weights
-    return grn_sign
-
-
-
 if False:
     collectRI = pd.read_csv("https://github.com/pablormier/omnipath-static/raw/main/op/collectri-26.09.2023.zip")
     collectRI.to_csv(f'{work_dir}/collectri.csv')
@@ -130,21 +131,6 @@ if False:
 
 
 colors_cell_type = ['#c4d9b3', '#c5bc8e', '#c49e81', '#c17d88', 'gray', 'lightsteelblue']
-colors_blind = [
-          '#E69F00',  # Orange
-          '#56B4E9',  # Sky Blue
-          '#009E73',  # Bluish Green
-          '#F0E442',  # Yellow
-          '#0072B2',  # Blue
-          '#D55E00',  # Vermillion
-          '#CC79A7']  # Reddish Purple
+
 
 colors_positive_controls = ['blue', 'cyan']
-colors_blind = [
-          '#E69F00',  # Orange
-          '#56B4E9',  # Sky Blue
-          '#009E73',  # Bluish Green
-          '#F0E442',  # Yellow
-          '#0072B2',  # Blue
-          '#D55E00',  # Vermillion
-          '#CC79A7']  # Reddish Purple
