@@ -3,7 +3,6 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 import numpy as np
 import matplotlib
-import lightgbm as lgb
 import pandas as pd
 from sklearn.model_selection import cross_validate
 from sklearn.linear_model import RidgeClassifier
@@ -421,6 +420,8 @@ def run_scib(bulk_adata, layer='lognorm', layer_baseline='n_counts', batch_key='
     rr = rr.dropna().T
     return rr 
 def run_classifier(adata, layer, batch_key):
+    import lightgbm as lgb
+
     print('GB classifier')
     model = lgb.LGBMClassifier(silent=True, verbose=-1)
     # model = RidgeClassifier()
