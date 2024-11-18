@@ -3,6 +3,7 @@
 
 *.slurm
 
+/results_folder/
 /output*
 /kaggle
 notebooks/.pybiomart.sqlite

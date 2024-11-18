@@ -199,7 +199,7 @@ def plot_bar(data_dict: dict[str, np.array], title: str=''):
     aa = plt.xticks(rotation=45)
 
 
-def plot_umap(adata, color='', palette=None, ax=None, X_label='X_umap',
+def plot_umap(adata, color='', palette=None, ax=None, X_label='X_umap', on_data=False,
               bbox_to_anchor=None, legend=True, legend_title='', **kwrds):
     latent = adata.obsm[X_label]
     var_unique_sorted = sorted(adata.obs[color].unique())
@@ -217,7 +217,7 @@ def plot_umap(adata, color='', palette=None, ax=None, X_label='X_umap',
         scatter = ax.scatter(sub_data[:, 0], sub_data[:, 1], label=group, **kwrds, c=c)
         legend_handles.append(plt.Line2D([0], [0], linestyle='none', marker='o', markersize=8, color=scatter.get_facecolor()[0]))
         
-        if color == 'leiden':
+        if on_data:
             mean_x = np.mean(sub_data[:, 0])
             mean_y = np.mean(sub_data[:, 1])
             ax.text(mean_x, mean_y, group, fontsize=9, ha='center', va='top', color='black', weight='bold')
@@ -230,7 +230,7 @@ def plot_umap(adata, color='', palette=None, ax=None, X_label='X_umap',
     ax.set_xticks([])
     ax.set_yticks([])
     # ax.margins(0.4)
-    if legend and color != 'leiden':
+    if legend and not on_data:
         legend  =ax.legend(handles=legend_handles, labels=var_unique_sorted, loc='upper left', 
                   bbox_to_anchor=bbox_to_anchor, frameon=False, title=legend_title, title_fontproperties={'weight': 'bold',  'size':9})
         legend.get_title().set_ha('left')
