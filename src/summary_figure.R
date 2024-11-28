@@ -39,14 +39,24 @@ column_info <-
       "S1", "S1", "S1", "metric_1", "funkyrect",  "metric_1", list(width = 2),
       "S2", "S2", "S2", "metric_1", "funkyrect",  "metric_1", list(width = 2),
       "static-theta-0.0", "static-theta-0.0", "Theta (min)", "metric_2", "funkyrect",  "metric_2", list(width = 2),
-      "static-theta-0.5", "static-theta-0.5", "Theta (median)", "metric_2", "funkyrect",  "metric_2", list(width = 2),      
+      "static-theta-0.5", "static-theta-0.5", "Theta (median)", "metric_2", "funkyrect",  "metric_2", list(width = 2),
+      "static-theta-1.0", "static-theta-1.0", "Theta (max)", "metric_2", "funkyrect",  "metric_2", list(width = 2),      
+      "op", "op", "OPSCA", "dataset", "funkyrect", "dataset", list(width = 2),
+      "adamson", "adamson", "Adamson", "dataset", "funkyrect", "dataset", list(width = 2),
+      "nakatake", "nakatake", "Nakatake", "dataset", "funkyrect", "dataset", list(width = 2),
+      "norman", "norman", "Norman", "dataset", "funkyrect", "dataset", list(width = 2),
+      "replogle2", "replogle2", "Replogle", "dataset", "funkyrect", "dataset", list(width = 2),
+      # "User-friendly", "User-friendly", "User-friendly", "resources", "funkyrect", "resources", list(width = 2)
     ),
     tribble(
       ~id, ~name, ~geom,
       "memory_log", "Peak memory (GB)", "rect",
       "memory_str", "", "text",
       "duration_log", "Duration (hour)", "rect",
-      "duration_str", "", "text"
+      "duration_str", "", "text",
+      "complexity_log", "Complexity", "rect",
+      "Complexity", "", "text",
+
     ) %>% mutate(
       group = "resources",
       palette = ifelse(geom == "text", NA_character_, "resources"),
@@ -67,7 +77,8 @@ column_groups <- tribble(
   "overall", "overall", "Overall",
   "metric_1", "metric_1", "Regression 1",
   "metric_2", "metric_2", "Regression 2",
-  "resources", "resources", "Resources"
+  "resources", "resources", "Resources", 
+  "dataset", "dataset", "Datasets", 
 )
 
 # create palettes
