@@ -28,49 +28,68 @@ summary_all <- read_tsv(file_path)
 # FIGURE 3a
 ##################################################
 
-
-# create column info
-column_info <-
-  bind_rows(
-    tribble(
-      ~id, ~id_color, ~name, ~group, ~geom, ~palette, ~options,
-      "method_name", NA_character_, "Name", "method", "text", NA_character_, list(width = 10, hjust = 0),
-      "overall_score", "overall_score", "Score", "overall", "bar", "overall", list(width = 4),
-      "S1", "S1", "S1", "metric_1", "funkyrect",  "metric_1", list(width = 2),
-      "S2", "S2", "S2", "metric_1", "funkyrect",  "metric_1", list(width = 2),
-      "static-theta-0.0", "static-theta-0.0", "Theta (min)", "metric_2", "funkyrect",  "metric_2", list(width = 2),
-      "static-theta-0.5", "static-theta-0.5", "Theta (median)", "metric_2", "funkyrect",  "metric_2", list(width = 2),
-      "static-theta-1.0", "static-theta-1.0", "Theta (max)", "metric_2", "funkyrect",  "metric_2", list(width = 2),      
-      "op", "op", "OPSCA", "dataset", "funkyrect", "dataset", list(width = 2),
-      "adamson", "adamson", "Adamson", "dataset", "funkyrect", "dataset", list(width = 2),
-      "nakatake", "nakatake", "Nakatake", "dataset", "funkyrect", "dataset", list(width = 2),
-      "norman", "norman", "Norman", "dataset", "funkyrect", "dataset", list(width = 2),
-      "replogle2", "replogle2", "Replogle", "dataset", "funkyrect", "dataset", list(width = 2),
-      # "User-friendly", "User-friendly", "User-friendly", "resources", "funkyrect", "resources", list(width = 2)
-    ),
-    tribble(
-      ~id, ~name, ~geom,
-      "memory_log", "Peak memory (GB)", "rect",
-      "memory_str", "", "text",
-      "duration_log", "Duration (hour)", "rect",
-      "duration_str", "", "text",
-      "complexity_log", "Complexity", "rect",
-      "Complexity", "", "text",
-
-    ) %>% mutate(
-      group = "resources",
-      palette = ifelse(geom == "text", NA_character_, "resources"),
-      options = map(geom, function(geom) {
-        if (geom == "text") {
-          list(overlay = TRUE, size = 2.5)
-        } else {
-          list(width = 2)
-        }
-      })
-    )
+# Add the new column for method types
+column_info <- bind_rows(
+  tribble(
+    ~id, ~id_color, ~name, ~group, ~geom, ~palette, ~options,
+    "method_name", NA_character_, "Name", "method", "text", NA_character_, list(width = 10, hjust = 0),
+    "method_type", NA_character_, "Modality", "method", "text", NA_character_, list(width = 2, hjust = 0),
+    "overall_score", "overall_score", "Score", "overall", "bar", "overall", list(width = 4),
+    "S11", "S11", "S11", "metric_1", "funkyrect",  "metric_1", list(width = 2),
+    "S12", "S12", "S12", "metric_1", "funkyrect",  "metric_1", list(width = 2),
+    "S21", "S21", "S21", "metric_2", "funkyrect",  "metric_2", list(width = 2),
+    "S22", "S22", "S22", "metric_2", "funkyrect",  "metric_2", list(width = 2),
+    "S23", "S23", "S23", "metric_2", "funkyrect",  "metric_2", list(width = 2),      
+    "op", "op", "OPSCA", "dataset", "funkyrect", "dataset", list(width = 2),
+    "adamson", "adamson", "Adamson", "dataset", "funkyrect", "dataset", list(width = 2),
+    "nakatake", "nakatake", "Nakatake", "dataset", "funkyrect", "dataset", list(width = 2),
+    "norman", "norman", "Norman", "dataset", "funkyrect", "dataset", list(width = 2),
+    "replogle2", "replogle2", "Replogle", "dataset", "funkyrect", "dataset", list(width = 2),
+  ),
+  tribble(
+    ~id, ~name, ~geom,
+    "memory_log", "Peak memory (GB)", "rect",
+    "memory_str", "", "text",
+    "duration_log", "Duration (hour)", "rect",
+    "duration_str", "", "text",
+    "complexity_log", "Complexity", "rect",
+    "Complexity", "", "text"
+  ) %>% mutate(
+    group = "resources",
+    palette = ifelse(geom == "text", NA_character_, "resources"),
+    options = map(geom, function(geom) {
+      if (geom == "text") {
+        list(overlay = TRUE, size = 2.5)
+      } else {
+        list(width = 2)
+      }
+    })
   )
-print(column_info)
-# create column groups
+)
+
+# Define the method type mapping
+method_type_mapping <- tribble(
+  ~method_name, ~method_type,
+  "GRNBoost2", "S",
+  "GENIE3", "S",
+  "PPCOR", "S",
+  "Scenic", "S",
+  "Portia", "S",
+  "scGLUE", "M",
+  "CellOracle", "M",
+  "Scenic+", "M",
+  "FigR", "M",
+  "GRaNIE", "M",
+  "Positive Control", "C",
+  "Negative Control", "C",
+  "Baseline Correlation", "C"
+)
+
+# Include the method types in the summary_all DataFrame
+summary_all <- summary_all %>%
+  left_join(method_type_mapping, by = "method_name")
+
+# Update column groups to include the new "Type" column
 column_groups <- tribble(
   ~group, ~palette, ~level1,
   "method", NA_character_, "",
@@ -78,10 +97,10 @@ column_groups <- tribble(
   "metric_1", "metric_1", "Regression 1",
   "metric_2", "metric_2", "Regression 2",
   "resources", "resources", "Resources", 
-  "dataset", "dataset", "Datasets", 
+  "dataset", "dataset", "Datasets"
 )
 
-# create palettes
+# Add palettes for the new column
 palettes <- list(
   overall = "Greys",
   metric_1 = "Blues",
@@ -89,7 +108,7 @@ palettes <- list(
   resources = "YlOrBr"
 )
 
-# create palettes
+# Update legends if necessary
 legends <- list(
   list(
     title = "Rank",
@@ -120,17 +139,14 @@ legends <- list(
   )
 )
 
-
-# create funkyheatmap
+# Create the funkyheatmap
 g3 <- funky_heatmap(
   data = summary_all,
   column_info = column_info %>% filter(id %in% colnames(summary_all)),
   column_groups = column_groups,
   palettes = palettes,
   position_args = position_arguments(
-    # determine xmax expand heuristically
     expand_xmax = 2,
-    # determine offset heuristically
     col_annot_offset = max(str_length(column_info$name)) / 5
   ),
   add_abc = TRUE,

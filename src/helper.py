@@ -7,7 +7,12 @@ import pandas as pd
 from sklearn.model_selection import cross_validate
 from sklearn.linear_model import RidgeClassifier
 from sklearn.metrics import r2_score, make_scorer, accuracy_score
-
+import os
+import sys
+import anndata as ad
+import scanpy as sc
+import subprocess
+import io
 # work_dir = '../output'
 
 matplotlib.rc('font', family='serif')
@@ -85,7 +90,7 @@ surragate_names = {
     'granie':'GRaNIE',
     'ananse':'ANANSE',
     'scglue':'scGLUE',
-    'pearson_corr': 'Pearson corr.',
+    'pearson_corr': 'Baseline Correlation',
     'grnboost2': 'GRNBoost2',
     'genie3': 'GENIE3',
     'scenic': 'Scenic',
@@ -96,11 +101,11 @@ surragate_names = {
     'SL':'SLA',
     'lognorm':'SLA',
     
-    'static-theta-0.0': r'$\theta$=min', 
-    'static-theta-0.5': r'$\theta$=median', 
-    'static-theta-1.0': r'$\theta$=max',
-    'S1': 'S1',
-    'S2': 'S2',
+    'static-theta-0.0': "S21", 
+    'static-theta-0.5': "S22", 
+    'static-theta-1.0': "S23",
+    'S1': 'S11',
+    'S2': 'S12',
 
     'op':'OPSCA',
     'nakatake': 'Nakatake', 
@@ -242,8 +247,6 @@ def plot_umap(adata, color='', palette=None, ax=None, X_label='X_umap', on_data=
         # Increase the distance between the title and legend entries
         legend._legend_box.align = "left"  # Align the entries to the left
         # legend._legend_box.set_spacing(2)  # Increase the spacing between the title and entries
-
-
 
 
 def plot_scatter(obs, obs_index, xs, ys, x_label='', y_label='', log=True, log_y=False, figsize=(5, 7)):
@@ -451,3 +454,57 @@ def isolation_forest(df_subset, group=['index'], cell_type_col='cell_type', valu
     clf.fit(cell_count_ratio.values)
     outlier_compounds = cell_count_ratio.index[clf.predict(cell_count_ratio.values)==-1]
     return outlier_compounds
+
+def process_trace_local(job_ids_dict):
+    def get_sacct_data(job_id):
+        command = f'sacct -j {job_id} --format=JobID,JobName,AllocCPUS,Elapsed,State,MaxRSS,MaxVMSize'
+        output = subprocess.check_output(command, shell=True).decode()
+        
+        # Load the output into a DataFrame
+        df = pd.read_csv(io.StringIO(output), delim_whitespace=True)
+        df = df.iloc[[2]]
+        return df
+    def elapsed_to_hours(elapsed_str):
+        time = elapsed_str.split('-')
+        if len(time) > 1:
+            day = int(time[0])
+            time = time[1]
+        else:
+            day = 0
+            time = time[0]
+        h, m, s = map(int, time.split(':'))
+        return day*24 + h + m / 60 + s / 3600
+    def reformat_data(df_local):
+        # Remove 'K' and convert to integers
+        df_local['MaxRSS'] = df_local['MaxRSS'].str.replace('K', '').astype(int)
+        df_local['MaxVMSize'] = df_local['MaxVMSize'].str.replace('K', '').astype(int)
+        df_local['Elapsed'] = df_local['Elapsed'].apply(lambda x: (elapsed_to_hours(x)))
+
+        # Convert MaxRSS and MaxVMSize from KB to GB
+        df_local['MaxRSS'] = df_local['MaxRSS'] / (1024 ** 2)  # Convert KB to GB
+        df_local['MaxVMSize'] = df_local['MaxVMSize'] / (1024 ** 2)  # Convert KB to GB
+        return df_local
+    for i, (name, job_id) in enumerate(job_ids_dict.items()):
+        if type(job_id)==list:
+            
+            for i_sub, job_id_ in enumerate(job_id):
+                df_ = get_sacct_data(job_id_)
+                df_ = reformat_data(df_)
+                if i_sub == 0:
+                    df = df_
+                else:
+                    concat_df = pd.concat([df, df_], axis=0)
+                    df['MaxVMSize'] = concat_df['MaxVMSize'].max()
+                    df['MaxRSS'] = concat_df['MaxRSS'].max()
+                    df['Elapsed'] = concat_df['Elapsed'].sum()
+        else: 
+            df = get_sacct_data(job_id)
+            df = reformat_data(df)
+        df.index = [name]
+        if i==0:
+            df_local = df
+        else:
+            df_local = pd.concat([df_local, df], axis=0)
+        
+    
+    return df_local
