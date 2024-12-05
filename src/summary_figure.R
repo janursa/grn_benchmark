@@ -85,10 +85,11 @@ method_type_mapping <- tribble(
   "Baseline Correlation", "C"
 )
 
-# Include the method types in the summary_all DataFrame
-summary_all <- summary_all %>%
-  left_join(method_type_mapping, by = "method_name")
 
+# Include the method types in the summary_all DataFrame
+# summary_all <- summary_all %>%
+#   left_join(method_type_mapping, by = "method_name")
+print(summary_all)
 # Update column groups to include the new "Type" column
 column_groups <- tribble(
   ~group, ~palette, ~level1,
@@ -152,10 +153,25 @@ g3 <- funky_heatmap(
   add_abc = TRUE,
   scale_column = FALSE,
   legends = legends
-)
+) 
+# +
+#   theme(
+#     text = element_text(family = "Liberation Sans", size = 10), # Change font family and size
+#     plot.title = element_text(family = "Liberation Sans", face = "bold", size = 12), # Title font customization
+#     axis.text = element_text(size = 10),  # Axis text customization
+#     legend.text = element_text(size = 10) # Legend text customization
+#   )
 ggsave(
   to_save,
   g3,
   width = g3$width +2,
   height = g3$height + 2
+)
+
+ggsave(
+  '../output/summary.png',
+  g3,
+  width = g3$width +2,
+  height = g3$height + 2,
+  dpi=300
 )

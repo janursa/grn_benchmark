@@ -473,7 +473,9 @@ def process_trace_local(job_ids_dict):
             day = 0
             time = time[0]
         h, m, s = map(int, time.split(':'))
-        return day*24 + h + m / 60 + s / 3600
+        hours = day*24 + h + m / 60 + s / 3600
+        hours_total = 20*hours # because we used 20 cps
+        return hours_total
     def reformat_data(df_local):
         # Remove 'K' and convert to integers
         df_local['MaxRSS'] = df_local['MaxRSS'].str.replace('K', '').astype(int)
