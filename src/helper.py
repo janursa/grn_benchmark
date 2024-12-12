@@ -12,6 +12,7 @@ import sys
 import anndata as ad
 import scanpy as sc
 import subprocess
+import seaborn as sns
 import io
 # work_dir = '../output'
 
@@ -90,28 +91,32 @@ surragate_names = {
     'granie':'GRaNIE',
     'ananse':'ANANSE',
     'scglue':'scGLUE',
-    'pearson_corr': 'Baseline Correlation',
+    'pearson_corr': 'Pearson Corr.',
     'grnboost2': 'GRNBoost2',
     'genie3': 'GENIE3',
     'scenic': 'Scenic',
 
-    'positive_control':'Positive Control',
-    'negative_control':'Negative Control',
+    'positive_control':'Positive Con.',
+    'negative_control':'Negative Con.',
     'pearson':'APR',
     'SL':'SLA',
     'lognorm':'SLA',
     
-    'static-theta-0.0': "S21", 
-    'static-theta-0.5': "S22", 
-    'static-theta-1.0': "S23",
-    'S1': 'S11',
-    'S2': 'S12',
+    'static-theta-0.0': "R2 (min)", 
+    'static-theta-0.5': "R2 (med)", 
+    'static-theta-1.0': "R2 (max)", 
+    'S1': "R1 (all)",
+    'S2': "R1 (grn)",
 
     'op':'OPSCA',
     'nakatake': 'Nakatake', 
     'norman': 'Norman', 
     'adamson':'Adamson', 
-    'replogle2': 'Replogle'
+    'replogle2': 'Replogle',
+    'Gtex:Whole blood': 'Gtex:Blood',
+    'Gtex:Brain amygdala': 'Gtex:Brain',
+    'Gtex:Breast mammary tissue': 'Gtex:Breast',
+
                    }
 controls3 = ['Dabrafenib', 'Belinostat', 'Dimethyl Sulfoxide']
 CELL_TYPES = ['NK cells', 'T cells CD4+', 'T cells CD8+', 'T regulatory cells', 'B cells', 'Myeloid cells']
@@ -177,7 +182,54 @@ def plot_heatmap(scores, ax=None, name='', fmt='0.02f', cmap="viridis"):
     ax.xaxis.set_label_position('top')
     ax.xaxis.tick_top()
     ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='left')
+def custom_jointplot(data, x, y, hue, ax, scatter_kws=None, kde_kws={"fill": True, "common_norm": False, "alpha": 0.4}, alpha=0.5, top_plot=True):
 
+    from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+    scatter_kws = scatter_kws or {}
+    kde_kws = kde_kws or {"fill": False, "common_norm": False}
+    if 'palette' in scatter_kws:
+        kde_kws['palette'] = scatter_kws['palette']
+
+    # Create axes for marginal plots using Divider
+    divider = make_axes_locatable(ax)
+    top_ax = divider.append_axes("top", size="20%", pad=0.1)
+    side_ax = divider.append_axes("right", size="20%", pad=0.1)
+
+    # Scatter plot on the central axis
+    sns.scatterplot(data=data, x=x, y=y, hue=hue, ax=ax, alpha=alpha, **scatter_kws)
+
+    # KDE marginal distributions
+    if top_plot:
+        sns.kdeplot(data=data, x=x, hue=hue, ax=top_ax, **kde_kws)
+    sns.kdeplot(data=data, y=y, hue=hue, ax=side_ax, **kde_kws)
+
+    # Styling for marginal axes (top_ax)
+    top_ax.get_yaxis().set_visible(False)
+    top_ax.set_xticks([])
+    top_ax.set_yticks([])
+    top_ax.set_ylabel('')
+    top_ax.set_xlabel('')
+    for spine in top_ax.spines.values():
+        spine.set_visible(False)
+    if top_ax.get_legend() is not None:
+        top_ax.get_legend().remove()
+
+    # Styling for marginal axes (side_ax)
+    side_ax.get_yaxis().set_visible(False)
+    side_ax.set_xticks([])
+    side_ax.set_yticks([])
+    side_ax.set_ylabel('')
+    side_ax.set_xlabel('')
+    for spine in side_ax.spines.values():
+        spine.set_visible(False)
+    if side_ax.get_legend() is not None:
+        side_ax.get_legend().remove()
+    for side in ['right', 'top']:
+        ax.spines[side].set_visible(False)
+
+    # Ensure that ax is not modified (e.g., keeping its ticks and labels)
+    ax.set_aspect("auto")
 
 def plot_cumulative_density(data, title='', ax=None, s=1, **kwdgs):
     # Step 1: Sort the data

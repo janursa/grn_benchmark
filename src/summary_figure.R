@@ -32,19 +32,19 @@ summary_all <- read_tsv(file_path)
 column_info <- bind_rows(
   tribble(
     ~id, ~id_color, ~name, ~group, ~geom, ~palette, ~options,
-    "method_name", NA_character_, "Name", "method", "text", NA_character_, list(width = 10, hjust = 0),
+    "method_name", NA_character_, "Name", "method", "text", NA_character_, list(width = 6, hjust = 0),
     "method_type", NA_character_, "Modality", "method", "text", NA_character_, list(width = 2, hjust = 0),
     "overall_score", "overall_score", "Score", "overall", "bar", "overall", list(width = 4),
-    "S11", "S11", "S11", "metric_1", "funkyrect",  "metric_1", list(width = 2),
-    "S12", "S12", "S12", "metric_1", "funkyrect",  "metric_1", list(width = 2),
-    "S21", "S21", "S21", "metric_2", "funkyrect",  "metric_2", list(width = 2),
-    "S22", "S22", "S22", "metric_2", "funkyrect",  "metric_2", list(width = 2),
-    "S23", "S23", "S23", "metric_2", "funkyrect",  "metric_2", list(width = 2),      
-    "op", "op", "OPSCA", "dataset", "funkyrect", "dataset", list(width = 2),
-    "adamson", "adamson", "Adamson", "dataset", "funkyrect", "dataset", list(width = 2),
-    "nakatake", "nakatake", "Nakatake", "dataset", "funkyrect", "dataset", list(width = 2),
-    "norman", "norman", "Norman", "dataset", "funkyrect", "dataset", list(width = 2),
-    "replogle2", "replogle2", "Replogle", "dataset", "funkyrect", "dataset", list(width = 2),
+    "R1 (all)", "R1 (all)", "R1 (all)", "metric_1", "funkyrect",  "metric_1", list(width = 2),
+    "R1 (grn)", "R1 (grn)", "R1 (grn)", "metric_1", "funkyrect",  "metric_1", list(width = 2),
+    "R2 (min)", "R2 (min)", "R2 (min)", "metric_2", "funkyrect",  "metric_2", list(width = 2),
+    "R2 (med)", "R2 (med)", "R2 (med)", "metric_2", "funkyrect",  "metric_2", list(width = 2),
+    "R2 (max)", "R2 (max)", "R2 (max)", "metric_2", "funkyrect",  "metric_2", list(width = 2),      
+    "OPSCA", "OPSCA", "OPSCA", "dataset", "funkyrect", "dataset", list(width = 2),
+    "Adamson", "Adamson", "Adamson", "dataset", "funkyrect", "dataset", list(width = 2),
+    "Nakatake", "Nakatake", "Nakatake", "dataset", "funkyrect", "dataset", list(width = 2),
+    "Norman", "Norman", "Norman", "dataset", "funkyrect", "dataset", list(width = 2),
+    "Replogle", "Replogle", "Replogle", "dataset", "funkyrect", "dataset", list(width = 2),
   ),
   tribble(
     ~id, ~name, ~geom,
@@ -87,8 +87,8 @@ method_type_mapping <- tribble(
 
 
 # Include the method types in the summary_all DataFrame
-# summary_all <- summary_all %>%
-#   left_join(method_type_mapping, by = "method_name")
+summary_all <- summary_all %>%
+  left_join(method_type_mapping, by = "method_name")
 print(summary_all)
 # Update column groups to include the new "Type" column
 column_groups <- tribble(
@@ -153,14 +153,13 @@ g3 <- funky_heatmap(
   add_abc = TRUE,
   scale_column = FALSE,
   legends = legends
-) 
-# +
-#   theme(
-#     text = element_text(family = "Liberation Sans", size = 10), # Change font family and size
-#     plot.title = element_text(family = "Liberation Sans", face = "bold", size = 12), # Title font customization
-#     axis.text = element_text(size = 10),  # Axis text customization
-#     legend.text = element_text(size = 10) # Legend text customization
-#   )
+) +
+  theme(
+    text = element_text(family = "Liberation Sans", size = 10), # Change font family and size
+    plot.title = element_text(family = "Liberation Sans", face = "bold", size = 12), # Title font customization
+    axis.text = element_text(size = 10),  # Axis text customization
+    legend.text = element_text(size = 10) # Legend text customization
+  )
 ggsave(
   to_save,
   g3,
@@ -169,7 +168,7 @@ ggsave(
 )
 
 ggsave(
-  '../output/summary.png',
+  '../results_folder//benchmark/figs/summary.png',
   g3,
   width = g3$width +2,
   height = g3$height + 2,
