@@ -161,14 +161,14 @@ g3 <- funky_heatmap(
     legend.text = element_text(size = 10) # Legend text customization
   )
 ggsave(
-  to_save,
+  paste0(to_save,'.pdf'),
   g3,
   width = g3$width +2,
   height = g3$height + 2
 )
 
 ggsave(
-  '../results_folder//benchmark/figs/summary.png',
+  paste0(to_save,'.png'),
   g3,
   width = g3$width +2,
   height = g3$height + 2,
