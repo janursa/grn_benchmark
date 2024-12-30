@@ -132,8 +132,10 @@ if False:
     collectRI.to_csv(f'{work_dir}/collectri.csv')
 
 
+all_models = ['ppcor','positive_control', 'pearson_corr',  'portia', 'grnboost2',  'granie', 'scenicplus']
 
 
+color_map_methods = {key:color for key, color in zip(all_models, sns.color_palette('Set2', len(all_models)))}
 colors_cell_type = ['#c4d9b3', '#c5bc8e', '#c49e81', '#c17d88', 'gray', 'lightsteelblue']
 
 

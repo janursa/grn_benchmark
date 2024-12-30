@@ -82,7 +82,7 @@ method_type_mapping <- tribble(
   "GRaNIE", "M",
   "Positive Control", "C",
   "Negative Control", "C",
-  "Baseline Correlation", "C"
+  "Pearson Corr.", "S"
 )
 
 
