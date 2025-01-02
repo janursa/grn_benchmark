@@ -96,15 +96,15 @@ surragate_names = {
     'genie3': 'GENIE3',
     'scenic': 'Scenic',
 
-    'positive_control':'Positive Con.',
-    'negative_control':'Negative Con.',
+    'positive_control':'Positive Ctrl',
+    'negative_control':'Negative Ctrl',
     'pearson':'APR',
     'SL':'SLA',
     'lognorm':'SLA',
     
-    'static-theta-0.0': "R2 (min)", 
-    'static-theta-0.5': "R2 (med)", 
-    'static-theta-1.0': "R2 (max)", 
+    'static-theta-0.0': "R2 (precision)", 
+    'static-theta-0.5': "R2 (balanced)", 
+    'static-theta-1.0': "R2 (recall)", 
     'S1': "R1 (all)",
     'S2': "R1 (grn)",
 

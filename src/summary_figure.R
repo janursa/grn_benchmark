@@ -37,9 +37,9 @@ column_info <- bind_rows(
     "overall_score", "overall_score", "Score", "overall", "bar", "overall", list(width = 4),
     "R1 (all)", "R1 (all)", "R1 (all)", "metric_1", "funkyrect",  "metric_1", list(width = 2),
     "R1 (grn)", "R1 (grn)", "R1 (grn)", "metric_1", "funkyrect",  "metric_1", list(width = 2),
-    "R2 (min)", "R2 (min)", "R2 (min)", "metric_2", "funkyrect",  "metric_2", list(width = 2),
-    "R2 (med)", "R2 (med)", "R2 (med)", "metric_2", "funkyrect",  "metric_2", list(width = 2),
-    "R2 (max)", "R2 (max)", "R2 (max)", "metric_2", "funkyrect",  "metric_2", list(width = 2),      
+    "R2 (precision)", "R2 (precision)", "R2 (precision)", "metric_1", "funkyrect",  "metric_1", list(width = 2),
+    "R2 (balanced)", "R2 (balanced)", "R2 (balanced)", "metric_1", "funkyrect",  "metric_1", list(width = 2),
+    "R2 (recall)", "R2 (recall)", "R2 (recall)", "metric_1", "funkyrect",  "metric_1", list(width = 2),      
     "OPSCA", "OPSCA", "OPSCA", "dataset", "funkyrect", "dataset", list(width = 2),
     "Adamson", "Adamson", "Adamson", "dataset", "funkyrect", "dataset", list(width = 2),
     "Nakatake", "Nakatake", "Nakatake", "dataset", "funkyrect", "dataset", list(width = 2),
@@ -80,8 +80,8 @@ method_type_mapping <- tribble(
   "Scenic+", "M",
   "FigR", "M",
   "GRaNIE", "M",
-  "Positive Control", "C",
-  "Negative Control", "C",
+  "Positive Ctrl", "",
+  "Negative Ctrl", "",
   "Pearson Corr.", "S"
 )
 
@@ -95,8 +95,7 @@ column_groups <- tribble(
   ~group, ~palette, ~level1,
   "method", NA_character_, "",
   "overall", "overall", "Overall",
-  "metric_1", "metric_1", "Regression 1",
-  "metric_2", "metric_2", "Regression 2",
+  "metric_1", "metric_1", "Metrics",
   "resources", "resources", "Resources", 
   "dataset", "dataset", "Datasets"
 )
@@ -104,8 +103,8 @@ column_groups <- tribble(
 # Add palettes for the new column
 palettes <- list(
   overall = "Greys",
-  metric_1 = "Blues",
-  metric_2 = "Reds",
+  metric_1 = "Reds",
+  # metric_2 = "Reds",
   resources = "YlOrBr"
 )
 
@@ -128,7 +127,8 @@ legends <- list(
     label_hjust = rep(.5, 12)
   ),
   list(palette = "metric_1", enabled = FALSE),
-  list(palette = "metric_2", enabled = FALSE),
+  list(palette = "dataset", enabled = FALSE),
+  # list(palette = "metric_2", enabled = FALSE),
   list(
     title = "Resources",
     palette = "resources",
