@@ -102,11 +102,17 @@ surragate_names = {
     'SL':'SLA',
     'lognorm':'SLA',
     
+    'reg2-theta-0.0': "R2 (precision)", 
+    'reg2-theta-0.5': "R2 (balanced)", 
+    'reg2-theta-1.0': "R2 (recall)", 
     'static-theta-0.0': "R2 (precision)", 
     'static-theta-0.5': "R2 (balanced)", 
     'static-theta-1.0': "R2 (recall)", 
     'S1': "R1 (all)",
     'S2': "R1 (grn)",
+    'ws-theta-0.0': "WS (precision)", 
+    'ws-theta-0.5': "WS (balanced)", 
+    'ws-theta-1.0': "WS (recall)", 
 
     'op':'OPSCA',
     'nakatake': 'Nakatake', 
@@ -132,11 +138,16 @@ if False:
     collectRI.to_csv(f'{work_dir}/collectri.csv')
 
 
-all_models = ['ppcor','positive_control', 'pearson_corr',  'portia', 'grnboost2',  'granie', 'scenicplus']
+all_models = ['ppcor', 'positive_control', 'pearson_corr',  'portia', 'grnboost2',  'granie', 'scenicplus']
 
 
 color_map_methods = {key:color for key, color in zip(all_models, sns.color_palette('Set2', len(all_models)))}
 colors_cell_type = ['#c4d9b3', '#c5bc8e', '#c49e81', '#c17d88', 'gray', 'lightsteelblue']
+
+datasets = ['op', 'replogle2', 'nakatake', 'norman', 'adamson']
+
+color_map_datasets = {key: color for key, color in zip(datasets, 
+                             sns.color_palette("deep", len(datasets)))}
 
 
 colors_positive_controls = ['blue', 'cyan']
