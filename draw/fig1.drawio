@@ -1,6 +1,6 @@
 <mxfile host="Electron" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/24.7.8 Chrome/128.0.6613.36 Electron/32.0.1 Safari/537.36" version="24.7.8">
   <diagram id="5yGklLYpo7IqFz-X4nBN" name="Page-1">
-    <mxGraphModel dx="4110" dy="5887" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="20" pageHeight="20" math="1" shadow="0">
+    <mxGraphModel dx="3292" dy="5367" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="20" pageHeight="20" math="1" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -3139,6 +3139,9 @@
         </mxCell>
         <mxCell id="nRppN-seSvNFlZ2EkS4o-117" value="" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=15;strokeWidth=2;fillColor=none;rotation=90;" vertex="1" parent="1">
           <mxGeometry x="205" y="-3995.95" width="88.88" height="14.8" as="geometry" />
+        </mxCell>
+        <mxCell id="nRppN-seSvNFlZ2EkS4o-118" value="&lt;p style=&quot;line-height: 1.2;&quot;&gt;&lt;/p&gt;&lt;div style=&quot;&quot;&gt;&lt;font style=&quot;font-size: 15px;&quot;&gt;Gene&lt;/font&gt;&lt;/div&gt;&lt;p&gt;&lt;/p&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=right;verticalAlign=middle;whiteSpace=wrap;rounded=0;rotation=0;opacity=70;" vertex="1" parent="1">
+          <mxGeometry x="69.05000000000007" y="-3931.07" width="49.29" height="12.78" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
