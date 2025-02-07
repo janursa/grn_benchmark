@@ -34,7 +34,7 @@ print(default_font)
 par = {
     'grn_models': ['pearson_corr', 'positive_control', 'celloracle', 'grnboost2', 'scenicplus'],
     'grn_models_dir': f'{task_grn_inference_dir}/resources/grn_models/op/',
-    'evaluation_data': f'{task_grn_inference_dir}/resources/evaluation_datasets/op_perturbation.h5ad'
+    'evaluation_data': f'{task_grn_inference_dir}/resources/evaluation_data/op_perturbation.h5ad'
 }
 # - imports 
 sys.path.append('../../task_grn_inference/src/utils')
