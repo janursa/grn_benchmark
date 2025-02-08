@@ -144,7 +144,7 @@ all_models = ['ppcor', 'positive_control', 'pearson_corr',  'portia', 'grnboost2
 color_map_methods = {key:color for key, color in zip(all_models, sns.color_palette('Set2', len(all_models)))}
 colors_cell_type = ['#c4d9b3', '#c5bc8e', '#c49e81', '#c17d88', 'gray', 'lightsteelblue']
 
-datasets = ['op', 'replogle2', 'nakatake', 'norman', 'adamson']
+datasets = ['op', 'replogle', 'nakatake', 'norman', 'adamson']
 
 color_map_datasets = {key: color for key, color in zip(datasets, 
                              sns.color_palette("deep", len(datasets)))}
