@@ -14,37 +14,17 @@ import scanpy as sc
 import subprocess
 import seaborn as sns
 import io
-# work_dir = '../output'
-
-matplotlib.rc('font', family='serif')
-matplotlib.rc('text', usetex='false')
-
-# def format_folder(work_dir, exclude_missing_genes, reg_type, theta, tf_n, norm_method, subsample=None):
-#     return f'{work_dir}/benchmark/scores/subsample_{subsample}/exclude_missing_genes_{exclude_missing_genes}/{reg_type}/theta_{theta}_tf_n_{tf_n}/{norm_method}'
-
-batch_key = 'plate_name'
-label_key = 'cell_type'
+import itertools
 
 
-COLORS = {
-    'Random': '#74ab8c',
-    'CollectRI': '#83b17b',
-    'FigR': '#56B4E9',
-    'CellOracle': '#b0b595',
-    'GRaNIE': '#009E73',
-    'ANANSE': '#e2b1cd',
-    'scGLUE': '#D55E00',
-    'Scenic+': '#dfc2e5',
-    'HKGs': 'darkblue',
-    'Positive': 'darkblue',
-    'Negative': 'indianred',
-    'Positive Control': 'darkblue',
-    'Negative Control': 'indianred',
-    'GRNBoost2': '#e2b1cd',
-    'GENIE3': '#009E73',
-    'Pearson corr.': '#56B4E9',
-    
-}
+colors_blind = [
+          '#E69F00',  # Orange
+          '#56B4E9',  # Sky Blue
+          '#009E73',  # Bluish Green
+          '#F0E442',  # Yellow
+          '#0072B2',  # Blue
+          '#D55E00',  # Vermillion
+          '#CC79A7']  # Reddish Purple
 
 LINESTYLES = {
     'Positive Control': '-',
@@ -78,38 +58,29 @@ MARKERS = {
 }
 
 surragate_names = {
-    'CollectRI': 'CollectRI', 'collectRI':'CollectRI', 'collectRI_sign':'CollectRI-signs', 'collectri': 'CollectRI',
-    'Scenic+': 'Scenic+', 'scenicplus':'Scenic+', 'scenicplus_sign': 'Scenic+-signs',
-    'CellOracle': 'CellOracle', 'celloracle':'CellOracle', 'celloracle_sign':'CellOracle-signs',
-    'figr':'FigR', 'figr_sign':'FigR-signs',
+    'collectri': 'CollectRI',
+    'scenicplus':'Scenic+', 
+    'celloracle':'CellOracle', 
+    'figr':'FigR',
     'genie3': 'GENIE3',
-    'grnboost2':'GRNboost2',
+    'grnboost2':'GRNBoost2',
     'ppcor':'PPCOR',
     'portia':'Portia',
     'baseline':'Baseline',
     'cov_net': 'Pearson cov',
     'granie':'GRaNIE',
-    'ananse':'ANANSE',
     'scglue':'scGLUE',
     'pearson_corr': 'Pearson Corr.',
-    'grnboost2': 'GRNBoost2',
-    'genie3': 'GENIE3',
     'scenic': 'Scenic',
-
     'positive_control':'Positive Ctrl',
     'negative_control':'Negative Ctrl',
-    'pearson':'APR',
-    'SL':'SLA',
-    'lognorm':'SLA',
-    
-    'reg2-theta-0.0': "R2 (precision)", 
-    'reg2-theta-0.5': "R2 (balanced)", 
-    'reg2-theta-1.0': "R2 (recall)", 
-    'static-theta-0.0': "R2 (precision)", 
-    'static-theta-0.5': "R2 (balanced)", 
-    'static-theta-1.0': "R2 (recall)", 
-    'S1': "R1 (all)",
-    'S2': "R1 (grn)",
+
+    'r2-theta-0.0': "R2 (precision)", 
+    'r2-theta-0.5': "R2 (balanced)", 
+    'r2-theta-1.0': "R2 (recall)", 
+
+    'r1_all': "R1 (all)",
+    'r1_grn': "R1 (grn)",
     'ws-theta-0.0': "WS (precision)", 
     'ws-theta-0.5': "WS (balanced)", 
     'ws-theta-1.0': "WS (recall)", 
@@ -118,19 +89,17 @@ surragate_names = {
     'nakatake': 'Nakatake', 
     'norman': 'Norman', 
     'adamson':'Adamson', 
-    'replogle2': 'Replogle',
+    'replogle': 'Replogle',
     'Gtex:Whole blood': 'Gtex:Blood',
     'Gtex:Brain amygdala': 'Gtex:Brain',
     'Gtex:Breast mammary tissue': 'Gtex:Breast',
 
-                   }
-controls3 = ['Dabrafenib', 'Belinostat', 'Dimethyl Sulfoxide']
-CELL_TYPES = ['NK cells', 'T cells CD4+', 'T cells CD8+', 'T regulatory cells', 'B cells', 'Myeloid cells']
-negative_control = 'Dimethyl Sulfoxide'
-controls2 = ['Dabrafenib', 'Belinostat']
-T_cell_types = ['T regulatory cells', 'T cells CD8+', 'T cells CD4+']
-cell_type_map = {cell_type: 'T cells' if cell_type in T_cell_types else cell_type for cell_type in CELL_TYPES}
-cell_types = ['NK cells', 'T cells', 'B cells', 'Myeloid cells']
+    }
+
+NEGATIVE_CONTROL = 'Dimethyl Sulfoxide'
+CONTROLS3 = ['Dabrafenib', 'Belinostat', 'Dimethyl Sulfoxide']
+SELECTED_MODELS = [surragate_names[name] for name in ['ppcor', 'positive_control', 'pearson_corr',  'portia', 'grnboost2',  'granie', 'scenicplus']]
+DATASETS = ['op', 'replogle', 'nakatake', 'norman', 'adamson']
 
 
 if False:
@@ -138,44 +107,16 @@ if False:
     collectRI.to_csv(f'{work_dir}/collectri.csv')
 
 
-all_models = ['ppcor', 'positive_control', 'pearson_corr',  'portia', 'grnboost2',  'granie', 'scenicplus']
+# - color palettes 
+
+palette_datasets = {key: color for key, color in zip(DATASETS, sns.color_palette("deep", len(DATASETS)))}
+palette_methods = {key:color for key, color in zip(SELECTED_MODELS, sns.color_palette('Set2', len(SELECTED_MODELS)))}
+palette_celltype = ['#c4d9b3', '#c5bc8e', '#c49e81', '#c17d88', 'gray', 'lightsteelblue']
+
+# - line styles
+linestyle_methods = {key: linestyle for key, linestyle in zip(SELECTED_MODELS, itertools.cycle(['-', '--', '-.', ':']))}
 
 
-color_map_methods = {key:color for key, color in zip(all_models, sns.color_palette('Set2', len(all_models)))}
-colors_cell_type = ['#c4d9b3', '#c5bc8e', '#c49e81', '#c17d88', 'gray', 'lightsteelblue']
-
-datasets = ['op', 'replogle', 'nakatake', 'norman', 'adamson']
-
-color_map_datasets = {key: color for key, color in zip(datasets, 
-                             sns.color_palette("deep", len(datasets)))}
-
-
-colors_positive_controls = ['blue', 'cyan']
-
-colors_blind = [
-          '#E69F00',  # Orange
-          '#56B4E9',  # Sky Blue
-          '#009E73',  # Bluish Green
-          '#F0E442',  # Yellow
-          '#0072B2',  # Blue
-          '#D55E00',  # Vermillion
-          '#CC79A7']  # Reddish Purple
-
-# COLORS = {
-#     'Random': '#74ab8c',
-#     'CollectRI': '#83b17b',
-#     'FigR': '#96b577',
-#     'CellOracle': '#b0b595',
-#     'GRaNIE': '#c9b4b1',
-#     'ANANSE': '#e2b1cd',
-#     'scGLUE': '#e5b8dc',
-#     'Scenic+': '#dfc2e5',
-#     'HKG': '#e7d2ec',
-#     'Positive': 'darkblue',
-#     'Negative': 'indianred',
-#     'Positive Control': 'darkblue',
-#     'Negative Control': 'indianred'
-# }
 def plot_heatmap(scores, ax=None, name='', fmt='0.02f', cmap="viridis"):
     import matplotlib.pyplot as plt
     import numpy as np
@@ -342,7 +283,7 @@ def plot_scatter(obs, obs_index, xs, ys, x_label='', y_label='', log=True, log_y
             for i, var in enumerate(included_vars):
                 label = var
                 mask = (index_vars == var)
-                ax.scatter(xs[mask], ys[mask], label=var, alpha=alpha, color=colors_cell_type[i], s=size)
+                ax.scatter(xs[mask], ys[mask], label=var, alpha=alpha, color=palette_celltype[i], s=size)
 
         ax.grid(alpha=0.4, linewidth=1, color='grey', linestyle='--')
         ax.set_xlabel(x_label)
@@ -361,7 +302,7 @@ def plot_scatter(obs, obs_index, xs, ys, x_label='', y_label='', log=True, log_y
             if index == 'sm_name':
                 handles.append(Patch(facecolor=colors_positive_controls[kk], label=label))
             else:
-                handles.append(Patch(facecolor=colors_cell_type[kk], label=label))
+                handles.append(Patch(facecolor=palette_celltype[kk], label=label))
         
         ax.legend(handles=handles, prop=prop, bbox_to_anchor=(1, 1), loc='upper left', borderaxespad=0, frameon=False)
     plt.tight_layout()
@@ -409,9 +350,6 @@ def plot_stratified_scatter(obs, ax, xs, ys, palette, size=4,  x_label='', y_lab
     ax.tick_params(axis='both', which='both', width=0.5, length=2)  # Adjust the tick thickness here
 
 
-
-
-## Common functions 
 def plot_stacked_bar_chart(cell_types_in_drops, title='', xticks=None, 
                            xticklabels=None, colors=None, figsize=(25, 4), 
                            ax=None, legend=False, color_map=None):
@@ -428,7 +366,7 @@ def plot_stacked_bar_chart(cell_types_in_drops, title='', xticks=None,
     cell_types = cell_types_in_drops.columns
     for i, cell_type in enumerate(cell_types):
         if color_map is None:
-            color=colors_cell_type[i]
+            color=palette_celltype[i]
         else:
             color=color_map[cell_type]
         ax.bar(np.arange(len(cc_cs)),
