@@ -13,3 +13,4 @@ test/
 notebooks/__pycache__/
 resources/
 draw/pngs/
+draw/.*

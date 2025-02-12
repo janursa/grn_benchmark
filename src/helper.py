@@ -58,6 +58,7 @@ MARKERS = {
 }
 
 surragate_names = {
+    'scprint': 'scPRINT',
     'collectri': 'CollectRI',
     'scenicplus':'Scenic+', 
     'celloracle':'CellOracle', 

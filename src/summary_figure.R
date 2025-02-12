@@ -85,7 +85,8 @@ method_type_mapping <- tribble(
   "GRaNIE", "M",
   "Positive Ctrl", "",
   "Negative Ctrl", "",
-  "Pearson Corr.", "S"
+  "Pearson Corr.", "S",
+  "scPRINT", "S"
 )
 
 
