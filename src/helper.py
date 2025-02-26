@@ -97,6 +97,7 @@ surragate_names = {
 
     }
 
+ORDERED_METHODS = ['Positive Ctrl', 'Pearson Corr.', 'GRNBoost2', 'Scenic+', 'Scenic' , 'CellOracle', 'FigR', 'GRaNIE', 'scGLUE', 'Portia', 'PPCOR', 'scPRINT', 'Negative Ctrl']
 NEGATIVE_CONTROL = 'Dimethyl Sulfoxide'
 CONTROLS3 = ['Dabrafenib', 'Belinostat', 'Dimethyl Sulfoxide']
 SELECTED_MODELS = [surragate_names[name] for name in ['ppcor', 'positive_control', 'pearson_corr',  'portia', 'grnboost2',  'granie', 'scenicplus']]
@@ -178,6 +179,66 @@ def plot_heatmap(scores, ax=None, name='', fmt='0.02f', cmap="viridis"):
     ax.xaxis.set_label_position('top')
     ax.xaxis.tick_top()
     ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='left')
+def determine_fold_change_effect(adata):
+    results = []
+
+    obs_all = adata.obs.reset_index(drop=True)
+    if 'X_norm' in adata.layers:
+        X_norm = adata.layers['X_norm']
+    else:
+        X_norm = adata.X
+
+    if 'cell_type' not in obs_all:
+        obs_all['cell_type'] = 'celltype'
+        
+    for cell_type in obs_all.cell_type.unique():
+        mask_celltype = obs_all.cell_type == cell_type
+
+        obs = obs_all.loc[mask_celltype, :]
+        X = X_norm[mask_celltype, :]
+
+        # - Compute absolute fold change for each gene compared to control group
+        # control_indices = obs.index[obs['is_control']].tolist()
+        control_matrix = X[obs['is_control'], :]
+        if hasattr(control_matrix, 'toarray'):
+            # Convert sparse matrix to dense
+            control_matrix = control_matrix.todense().A
+        
+        control_mean_expression = np.mean(control_matrix, axis=0).flatten()  
+        control_std_expression = np.std(control_matrix, axis=1).mean()
+
+       
+        if control_std_expression:
+            results.append({'perturbation': None, 'Expression fold change': None, 'STD fold change': None, 'cell_type':None})
+
+        # - Group by unique perturbation samples
+        for perturbation in obs['perturbation'].unique():
+            group_indices = obs['perturbation']==perturbation
+            sample_matrix = X[group_indices, :]  # Subset the gene expression data
+            if hasattr(sample_matrix, 'toarray'):
+                # Convert sparse matrix to dense
+                sample_matrix = sample_matrix.todense().A
+            mean_expression = np.mean(sample_matrix, axis=0)  # Mean expression per gene for this sample
+            # print(sample_matrix.shape)
+            std_expression = np.std(sample_matrix, axis=1).mean()
+            
+            # std_expression = np.std(sample_matrix, axis=1).mean()  # Mean expression per gene for this sample
+            # - calculate fold change
+            mask = control_mean_expression != 0
+            # print(control_mean_expression.shape, mean_expression.shape)
+            
+            fold_change = (mean_expression[mask])/(control_mean_expression[mask])
+
+            # - calulcate std 
+            
+            std_change = (std_expression)/(control_std_expression)
+
+            # Store the results for each perturbation
+            results.append({'perturbation': perturbation, 'Expression fold change': np.abs(fold_change).mean(), 'STD fold change': std_change, 'cell_type':cell_type})
+
+    results = pd.DataFrame(results)
+
+    return results
 def custom_jointplot(data, x, y, hue, ax, scatter_kws=None, kde_kws={"fill": True, "common_norm": False, "alpha": 0.4}, alpha=0.5, top_plot=True):
 
     from mpl_toolkits.axes_grid1 import make_axes_locatable
