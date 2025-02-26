@@ -25,3 +25,4 @@ To run this repository, follow these steps:
 
 ## Authors
 Jalil Nourisa
+Antoine Passemiers
