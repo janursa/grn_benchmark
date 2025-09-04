@@ -15,6 +15,14 @@ import subprocess
 import seaborn as sns
 import io
 import itertools
+import os
+from dotenv import load_dotenv
+
+
+base_dir = '/home/jnourisa/projs/ongoing/grn_benchmark'
+load_dotenv(f"{base_dir}/env.sh")
+TASK_GRN_INFERENCE_DIR = os.environ['TASK_GRN_INFERENCE_DIR']
+RESULT_DIR = f'{TASK_GRN_INFERENCE_DIR}/resources/results/'
 
 
 colors_blind = [
@@ -57,7 +65,7 @@ MARKERS = {
     'Pearson corr.': '-' 
 }
 
-surragate_names = {
+surrogate_names = {
     'scprint': 'scPRINT',
     'collectri': 'CollectRI',
     'scenicplus':'Scenic+', 
@@ -65,6 +73,7 @@ surragate_names = {
     'figr':'FigR',
     'genie3': 'GENIE3',
     'grnboost2':'GRNBoost2',
+    'grnboost':'GRNBoost2',
     'ppcor':'PPCOR',
     'portia':'Portia',
     'baseline':'Baseline',
@@ -94,14 +103,19 @@ surragate_names = {
     'Gtex:Whole blood': 'Gtex:Blood',
     'Gtex:Brain amygdala': 'Gtex:Brain',
     'Gtex:Breast mammary tissue': 'Gtex:Breast',
+    'xaira_HCT116': 'Xaira:HCT116',
+    'xaira_HEK293T': 'Xaira:HEK293T',
+    'parsebioscience': 'ParseBioscience',
+    'ibd': 'IBD',
+    '300BCG': '300BCG'
 
     }
 
 ORDERED_METHODS = ['Positive Ctrl', 'Pearson Corr.', 'GRNBoost2', 'Scenic+', 'Scenic' , 'CellOracle', 'FigR', 'GRaNIE', 'scGLUE', 'Portia', 'PPCOR', 'scPRINT', 'Negative Ctrl']
 NEGATIVE_CONTROL = 'Dimethyl Sulfoxide'
 CONTROLS3 = ['Dabrafenib', 'Belinostat', 'Dimethyl Sulfoxide']
-SELECTED_MODELS = [surragate_names[name] for name in ['ppcor', 'positive_control', 'pearson_corr',  'portia', 'grnboost2',  'granie', 'scenicplus']]
-DATASETS = ['op', 'replogle', 'nakatake', 'norman', 'adamson']
+SELECTED_MODELS = [surrogate_names[name] for name in ['ppcor', 'pearson_corr',  'portia', 'grnboost2',  'granie', 'scenicplus', 'scenic']]
+DATASETS = ['op', 'replogle', 'nakatake', 'norman', 'adamson', 'xaira_HCT116', 'xaira_HEK293T', 'parsebioscience', 'ibd', '300BCG']
 
 
 if False:
@@ -119,125 +133,84 @@ palette_celltype = ['#c4d9b3', '#c5bc8e', '#c49e81', '#c17d88', 'gray', 'lightst
 linestyle_methods = {key: linestyle for key, linestyle in zip(SELECTED_MODELS, itertools.cycle(['-', '--', '-.', ':']))}
 
 
-# def plot_heatmap(scores, ax=None, name='', fmt='0.02f', cmap="viridis"):
-#     import matplotlib.pyplot as plt
-#     import numpy as np
-#     import seaborn
-#     if ax is None:
-#         fig, ax = plt.subplots(1, 1, figsize=(4, 4), sharey=True)
-#     scores = scores.astype(float)
-#     vmin = 0
-#     vmax = np.nanmax(scores)
-#     seaborn.heatmap(scores, ax=ax, square=False, cbar=False, annot=True, fmt=fmt, vmin=vmin, vmax=vmax, cmap=cmap)
-#     # seaborn.heatmap(scores, ax=ax, square=False, cbar=False, annot=True, vmin=vmin, vmax=vmax)
-#     ax.tick_params(left=False, bottom=False)
-#     ax.xaxis.set_tick_params(width=0)
-#     ax.yaxis.set_tick_params(width=0)
-#     ax.set_title(name, pad=10)
 
-#     ax.xaxis.set_label_position('top')
-#     ax.xaxis.tick_top()
-#     ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='left')
+def retrieve_grn_path(dataset, model):
 
-def plot_heatmap(scores, ax=None, name='', fmt='0.02f', cmap="viridis"):
-    import matplotlib.pyplot as plt
-    import numpy as np
-    import seaborn
+    return f'{TASK_GRN_INFERENCE_DIR}/resources/results/{dataset}/{dataset}.{model}.{model}.prediction.h5ad'
 
-    if ax is None:
-        fig, ax = plt.subplots(1, 1, figsize=(4, 4), sharey=True)
+def determine_fold_change_effect(adata, pseudocount=1e-6):
+    """
+    Compute fold change and standardized effect of perturbations per cell type.
 
-    # Normalize each column individually
-    scores_normalized = scores.apply(lambda x: (x - np.nanmin(x)) / (np.nanmax(x) - np.nanmin(x)), axis=0)
-    scores_normalized = scores_normalized.round(2)
-    # scores_normalized['Rank'] = scores['Rank'].max()-scores['Rank']
-    # scores_normalized['Rank'] = scores_normalized['Rank']/scores_normalized['Rank'].max()
+    Parameters
+    ----------
+    adata : AnnData
+        Single-cell expression data
+    pseudocount : float
+        Small value to avoid division by zero
 
-    # Define the color scale range for each column (0 to 1 after normalization)
-    vmin = 0
-    vmax = 1
-
-    # Plot the heatmap with normalized scores
-    seaborn.heatmap(scores_normalized, ax=ax, square=False, cbar=False, annot=True, fmt=fmt, vmin=vmin, vmax=vmax, cmap=cmap)
-    # Overlay the original (unnormalized) scores as annotations
-    # scores['Rank'] = scores['Rank'].astype(int)
-    # print(scores['Rank'])
-    # Overlay the original (unnormalized) scores as annotations
-    for text, (i, j) in zip(ax.texts, np.ndindex(scores.shape)):
-        value = scores.iloc[i, j]
-        if isinstance(value, np.int64):  # Check if the value is an integer for 'Rank'
-            text.set_text(f'{value:d}')
-        else:
-            text.set_text(f'{value:.2f}')
-
-    # Customize the axes and title
-    ax.tick_params(left=False, bottom=False)
-    ax.xaxis.set_tick_params(width=0)
-    ax.yaxis.set_tick_params(width=0)
-    ax.set_title(name, pad=10)
-
-    ax.xaxis.set_label_position('top')
-    ax.xaxis.tick_top()
-    ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='left')
-def determine_fold_change_effect(adata):
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with columns: perturbation, Expression fold change, STD fold change, cell_type
+    """
     results = []
 
     obs_all = adata.obs.reset_index(drop=True)
+    
+    # Use normalized layer if available
     if 'X_norm' in adata.layers:
         X_norm = adata.layers['X_norm']
     else:
         X_norm = adata.X
+    X_norm = X_norm.toarray() if hasattr(X_norm, 'toarray') else X_norm
+    # Check for negative values or NaNs
+    if np.any(X_norm < 0):
+        raise ValueError("X_norm contains negative values")
+    if np.any(np.isnan(X_norm)):
+        raise ValueError("X_norm contains NaN values")
+    if 'cell_type' not in obs_all:
+        obs_all['cell_type'] = 'celltype'
 
     if 'cell_type' not in obs_all:
         obs_all['cell_type'] = 'celltype'
         
     for cell_type in obs_all.cell_type.unique():
         mask_celltype = obs_all.cell_type == cell_type
-
         obs = obs_all.loc[mask_celltype, :]
         X = X_norm[mask_celltype, :]
 
-        # - Compute absolute fold change for each gene compared to control group
-        # control_indices = obs.index[obs['is_control']].tolist()
-        control_matrix = X[obs['is_control'], :]
-        if hasattr(control_matrix, 'toarray'):
-            # Convert sparse matrix to dense
-            control_matrix = control_matrix.todense().A
+        # Identify control cells
+        control_mask = obs['is_control']
+        control_matrix = X[control_mask, :]
+
+        # Mean and std per gene
+        control_mean_expression = np.mean(control_matrix, axis=0)
+        control_std_expression = np.std(control_matrix, axis=1)
+
+        mask = control_mean_expression != 0
+
+        # Skip if control is empty
+        if control_matrix.shape[0] == 0:
+            print(f'No control cells for cell type {cell_type}, skipping.')
+            continue
         
-        control_mean_expression = np.mean(control_matrix, axis=0).flatten()  
-        control_std_expression = np.std(control_matrix, axis=1).mean()
-
-       
-        if control_std_expression:
-            results.append({'perturbation': None, 'Expression fold change': None, 'STD fold change': None, 'cell_type':None})
-
-        # - Group by unique perturbation samples
         for perturbation in obs['perturbation'].unique():
-            group_indices = obs['perturbation']==perturbation
-            sample_matrix = X[group_indices, :]  # Subset the gene expression data
-            if hasattr(sample_matrix, 'toarray'):
-                # Convert sparse matrix to dense
-                sample_matrix = sample_matrix.todense().A
-            mean_expression = np.mean(sample_matrix, axis=0)  # Mean expression per gene for this sample
-            # print(sample_matrix.shape)
-            std_expression = np.std(sample_matrix, axis=1).mean()
-            
-            # std_expression = np.std(sample_matrix, axis=1).mean()  # Mean expression per gene for this sample
-            # - calculate fold change
-            mask = control_mean_expression != 0
-            # print(control_mean_expression.shape, mean_expression.shape)
-            
-            fold_change = (mean_expression[mask])/(control_mean_expression[mask])
-
-            # - calulcate std 
-            
-            std_change = (std_expression)/(control_std_expression)
-
-            # Store the results for each perturbation
-            results.append({'perturbation': perturbation, 'Expression fold change': np.abs(fold_change).mean(), 'STD fold change': std_change, 'cell_type':cell_type})
+            sample_mask = obs['perturbation'] == perturbation
+            sample_matrix = X[sample_mask, :]
+            mean_expression = np.mean(sample_matrix, axis=0)
+            std_expression = np.std(sample_matrix, axis=1)
+            fold_change = (mean_expression[mask] + pseudocount) / (control_mean_expression[mask] + pseudocount)
+            fold_change_log2 = np.log2(fold_change)
+            std_change = np.log2(np.mean(std_expression)+pseudocount) - np.log2(np.mean(control_std_expression)+pseudocount)
+            results.append({
+                'perturbation': perturbation,
+                'Expression fold change': np.median(fold_change_log2),
+                'STD fold change': std_change,
+                'cell_type': cell_type
+            })
 
     results = pd.DataFrame(results)
-
     return results
 def custom_jointplot(data, x, y, hue, ax, scatter_kws=None, kde_kws={"fill": True, "common_norm": False, "alpha": 0.4}, alpha=0.5, top_plot=True):
 

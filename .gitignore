@@ -15,3 +15,4 @@ resources/
 draw/pngs/
 draw/.*
 repo/
+logs/*

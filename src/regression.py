@@ -97,7 +97,7 @@ def create_positive_control(X: np.ndarray) -> np.ndarray:
 
 def pivot_grn(net):
     # Remove self-regulations
-    net = net[net['source'] != net['target']]
+    net = net[net['source'].astype(str) != net['target'].astype(str)]
     df_tmp = net.pivot(index='target', columns='source', values='weight')
     return df_tmp.fillna(0)
 def run_method_1(
