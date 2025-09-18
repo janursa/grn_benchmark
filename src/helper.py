@@ -16,14 +16,6 @@ import seaborn as sns
 import io
 import itertools
 import os
-from dotenv import load_dotenv
-
-
-base_dir = '/home/jnourisa/projs/ongoing/grn_benchmark'
-load_dotenv(f"{base_dir}/env.sh")
-TASK_GRN_INFERENCE_DIR = os.environ['TASK_GRN_INFERENCE_DIR']
-RESULT_DIR = f'{TASK_GRN_INFERENCE_DIR}/resources/results/'
-
 
 colors_blind = [
           '#E69F00',  # Orange
@@ -212,6 +204,35 @@ def determine_fold_change_effect(adata, pseudocount=1e-6):
 
     results = pd.DataFrame(results)
     return results
+
+def plot_heatmap(scores, ax=None, name='', fmt='0.02f', cmap="viridis"):
+    import matplotlib.pyplot as plt
+    import numpy as np
+    import seaborn
+
+    if ax is None:
+        fig, ax = plt.subplots(1, 1, figsize=(4, 4), sharey=True)
+
+    scores_normalized = scores.apply(lambda x: (x - np.nanmin(x)) / (np.nanmax(x) - np.nanmin(x)), axis=0)
+    scores_normalized = scores_normalized.round(2)
+    vmin = 0
+    vmax = 1
+    scores_normalized = scores_normalized.apply(pd.to_numeric, errors='coerce')
+    seaborn.heatmap(scores_normalized, ax=ax, square=False, cbar=False, annot=True, fmt=fmt, vmin=vmin, vmax=vmax, cmap=cmap)
+    for text, (i, j) in zip(ax.texts, np.ndindex(scores.shape)):
+        value = scores.iloc[i, j]
+        if isinstance(value, np.int64):  # Check if the value is an integer for 'Rank'
+            text.set_text(f'{value:d}')
+        else:
+            text.set_text(f'{value:.2f}')
+    ax.tick_params(left=False, bottom=False)
+    ax.xaxis.set_tick_params(width=0)
+    ax.yaxis.set_tick_params(width=0)
+    ax.set_title(name, pad=10)
+
+    ax.xaxis.set_label_position('top')
+    ax.xaxis.tick_top()
+    ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='left')
 def custom_jointplot(data, x, y, hue, ax, scatter_kws=None, kde_kws={"fill": True, "common_norm": False, "alpha": 0.4}, alpha=0.5, top_plot=True):
 
     from mpl_toolkits.axes_grid1 import make_axes_locatable
