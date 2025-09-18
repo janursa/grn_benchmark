@@ -8,7 +8,7 @@
 #SBATCH --mem=250GB
 #SBATCH --partition=cpu
 
-source env.sh
+source ../env.sh
 dataset=$1
 gene_wise_output=$2
 ws_output=$3

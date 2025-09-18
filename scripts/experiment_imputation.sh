@@ -19,7 +19,7 @@ run_imputation=true
 run_grn_inference=true
 run_metrics=true
 
-source env.sh
+source ../env.sh
 output_dir="${RESULTS_DIR}/experiment/imputation"
 output_file="${output_dir}/metrics_${dataset}_${inference_method}.csv"
 
@@ -32,7 +32,7 @@ fi
 
 if [ "$run_imputation" = true ]; then
     echo "Running imputations..."
-    python src/stability_analysis/imputation/impute.py \
+    python src/stability_analysis/imputation/script.py \
     --dataset "$dataset" \
     --imputation_methods "${imputation_methods[@]}" \
     --output_dir "$output_dir"
@@ -67,26 +67,39 @@ if [ "$run_grn_inference" = true ]; then
 fi
 
 if [ "$run_metrics" = true ]; then
-    # Build a space-separated list of model files
     predictions=""
     for imputation in "${imputation_methods[@]}"; do
         predictions="${predictions} ${output_dir}/${dataset}_${imputation}_${inference_method}_prediction.h5ad"
     done
 
-    reg2_consensus_file="${output_dir}/regulators_consensus_${dataset}.json"
-
-    cd "$TASK_GRN_INFERENCE_DIR" && python src/metrics/regression_2/consensus/script.py \
-        --dataset "$dataset" \
-        --regulators_consensus "$reg2_consensus_file" \
-        --evaluation_data "resources/grn_benchmark/evaluation_data/${dataset}_bulk.h5ad" \
-        --predictions $predictions
-
-
     echo "Running metrics..."
-    cd "$GRN_BENCHMARK_DIR" && python src/stability_analysis/imputation/metrics.py \
-        --dataset "$dataset" \
-        --reg2_consensus_file "$reg2_consensus_file" \
-        --predictions $predictions \
-        --output_file "$output_file"
+    score_files=()
+
+    for prediction in $predictions; do
+        score_file="${output_dir}/$(basename "${prediction}" .h5ad)_score.h5ad"
+        cd "$TASK_GRN_INFERENCE_DIR" && bash src/metrics/all_metrics/run_local.sh \
+            --dataset "$dataset" \
+            --prediction "$prediction" \
+            --score "$score_file"
+        score_files+=("$score_file")
+    done
+
+    echo "Aggregating results..."
+    python <<EOF
+import pandas as pd
+
+score_files = ${score_files[@]}
+
+results_all = []
+for f in score_files:
+    df = pd.read_hdf(f)  # assuming score.h5ad is an HDF5-backed AnnData
+    df = df.to_df() if hasattr(df, "to_df") else df
+    df["prediction"] = f
+    results_all.append(df)
+
+results = pd.concat(results_all, ignore_index=True)
+results.to_csv("${output_file}", index=False)
+EOF
 fi
+
 echo "Done!"

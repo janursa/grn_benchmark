@@ -17,5 +17,5 @@ if [ -z "$dataset" ]; then
     echo "Usage: $0 <dataset>"
     exit 1
 fi
-source env.sh
+source ../env.sh
 python src/stability_analysis/permute_grn/script.py --dataset $dataset

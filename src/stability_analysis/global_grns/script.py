@@ -12,11 +12,13 @@ RESULTS_DIR = env['RESULTS_DIR']
 sys.path.append(env["METRICS_DIR"])
 sys.path.append(env["UTILS_DIR"])
 
+
 from util import naming_convention as naming_convention_main
-from regression_2.helper import main as main_reg2
-from ws_distance.helper import main as main_ws_distance
 from ws_distance.consensus.helper import main as main_consensus_ws_distance
 from regression_2.consensus.helper import main as main_consensus_reg2
+
+sys.path.append(env['TASK_GRN_INFERENCE_DIR'])
+from src.metrics.all_metrics.helper import main as main_metrics
 
 from src.params import get_par
 
@@ -58,14 +60,8 @@ if __name__ == '__main__':
         # - grn evaluation
         print(f"Calculating metrics for {model}...", flush=True)
         par['prediction'] = f'{results_dir}/{naming_convention(dataset, model)}'
-        rr_store = []
-        metric_reg2 = main_reg2(par)
-        rr_store.append(metric_reg2)
-        if False:
-            _, metric_ws = main_ws_distance(par)
-            rr_store.append(metric_ws)
-        rr = pd.concat(rr_store, axis=1)
-        rr['model'] = model
-        metrics_all.append(rr)
+        metric_rr = main_metrics(par)
+        metric_rr['model'] = model
+        metrics_all.append(metric_rr)
     metrics_all = pd.concat(metrics_all, axis=0)
     metrics_all.to_csv(f'{results_dir}/metrics_all.csv', index=False)

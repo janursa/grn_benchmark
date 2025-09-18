@@ -18,7 +18,7 @@ layer='pearson_residual'
 run_grn_inference=true
 run_metrics=true
 
-source env.sh
+source ../env.sh
 output_dir="${RESULTS_DIR}/experiment/normalization"
 mkdir -p "$output_dir"
 output_file="${output_dir}/metrics_${dataset}.csv"

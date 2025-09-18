@@ -12,5 +12,5 @@
 
 set -e
 
-source env.sh
+source ../env.sh
 python src/stability_analysis/global_grns/script.py
