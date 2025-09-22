@@ -13,22 +13,18 @@
 set -euo pipefail
 
 dataset=$1
-run_type=$2  # bash or sbatch
+
 if [ -z "$dataset" ]; then
     echo "Usage: $0 <dataset> "
     exit 1
 fi
 
-if [ -z "$run_type" ]; then
-    echo "Usage: $0 <dataset> <run_type>"
-    echo "run_type: bash or sbatch"
-    exit 1
-fi
+
 
 inference_methods=( "pearson_corr" "grnboost" "scenic" "ppcor" )
 layer='pearson_residual'
-run_grn_inference=true
-run_metrics=false
+run_grn_inference=false
+run_metrics=true
 
 source env.sh
 output_dir="${RESULTS_DIR}/experiment/normalization"
@@ -38,7 +34,7 @@ output_file="${output_dir}/metrics_${dataset}.csv"
 
 
 if [ "$run_grn_inference" = true ]; then
-   
+    run_type='sbatch'
     for inference_method in "${inference_methods[@]}"; do
         echo "Running GRN inference $inference_method ..."
         rna_file="${INFERENCE_DIR}/${dataset}_rna.h5ad"
@@ -59,26 +55,55 @@ if [ "$run_grn_inference" = true ]; then
 fi
 
 if [ "$run_metrics" = true ]; then
-    # Build a space-separated list of model files
-    predictions=""
+    script_file="src/metrics/all_metrics/run_local.sh"
+    score_files=()
+    echo "Run metrics on $layer "
     for inference_method in "${inference_methods[@]}"; do
-        predictions="${predictions} ${output_dir}/${dataset}_${inference_method}_prediction.h5ad"
+        prediction="${output_dir}/${dataset}_${inference_method}_prediction.h5ad"
+        score_file="${output_dir}/$(basename "${prediction}" .h5ad)_score.h5ad"
+        cd "$TASK_GRN_INFERENCE_DIR" && bash src/metrics/all_metrics/run_local.sh \
+            --dataset "$dataset" \
+            --prediction "$prediction" \
+            --score "$score_file" \
+            --layer "$layer"
+        score_files+=("$score_file")
     done
 
-    # reg2_consensus_file="${output_dir}/regulators_consensus_${dataset}.json"
+    echo "Run metrics on default layer"
+    for inference_method in "${inference_methods[@]}"; do
+        prediction="${RESULTS_DIR}/${dataset}/${dataset}.${inference_method}.${inference_method}.prediction.h5ad"
+        score_file="${output_dir}/$(basename "${prediction}" .h5ad)_score_defualt.h5ad"
+        cd "$TASK_GRN_INFERENCE_DIR" && bash src/metrics/all_metrics/run_local.sh \
+            --dataset "$dataset" \
+            --prediction "$prediction" \
+            --score "$score_file" \
+            --layer "lognorm"
+        score_files+=("$score_file")
+    done
 
-    # cd "$TASK_GRN_INFERENCE_DIR" && python src/metrics/regression_2/consensus/script.py \
-    #     --dataset "$dataset" \
-    #     --regulators_consensus "$reg2_consensus_file" \
-    #     --evaluation_data "resources/grn_benchmark/evaluation_data/${dataset}_bulk.h5ad" \
-    #     --predictions $predictions
+    echo "Aggregating results..."
+    python - "$output_file" "${score_files[@]}" <<'EOF'
+import anndata as ad
+import pandas as pd
+import sys
 
+output_file = sys.argv[1]
+score_files = sys.argv[2:]  # all remaining args are the score files
 
-    echo "Running metrics..."
-    cd "$GRN_BENCHMARK_DIR" && python src/stability_analysis/imputation/metrics.py \
-        --dataset "$dataset" \
-        --reg2_consensus_file "$reg2_consensus_file" \
-        --predictions $predictions \
-        --output_file "$output_file"
+results_all = []
+for f in score_files:
+    adata = ad.read_h5ad(f)
+    print(adata.uns)
+    metrics_keys = adata.uns['metric_ids']
+    metrics_values = adata.uns['metric_values']
+    df = {k: [v] for k, v in zip(metrics_keys, metrics_values)}
+    df = pd.DataFrame(df)
+
+    df["prediction"] = f
+    results_all.append(df)
+
+results = pd.concat(results_all, ignore_index=True)
+results.to_csv(output_file, index=False)
+EOF
+    echo "Experiment completed. Results saved to: $output_file"
 fi
-echo "Done!"

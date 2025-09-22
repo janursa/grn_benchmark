@@ -622,3 +622,37 @@ def load_env(env_file="../env.yaml"):
 
     env = load_config()
     return env
+
+
+def read_yaml_raw(file_path):
+    import yaml
+    with open(file_path, 'r') as file:
+        yaml_content = yaml.safe_load(file)
+    print(yaml_content)
+    record_store = []
+    for entry in yaml_content:
+        dataset_id = entry['dataset_id']
+        method_id = entry['method_id']
+        metric_ids = entry['metric_ids']
+        metric_values = entry['metric_values']
+        for metric_id, metric_value in zip(metric_ids, metric_values):
+            record_store.append({
+                'dataset_id': dataset_id,
+                'method_id': method_id,
+                'metric_id': metric_id,
+                'metric_value': metric_value
+            })
+    df = pd.DataFrame(record_store)
+    
+    return df
+def pivot_table(df):
+    df = df.pivot(index=['dataset_id', 'method_id'], columns='metric_id', values='metric_value').reset_index()
+    df.rename(columns={'dataset_id': 'dataset', 'method_id': 'model'}, inplace=True)
+    return df
+def read_yaml(file_path):
+    df = read_yaml_raw(file_path).reset_index()
+    df = df[df['dataset_id']!= 'missing']
+    df = pivot_table(df)
+    return df
+
+

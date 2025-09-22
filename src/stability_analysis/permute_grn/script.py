@@ -27,10 +27,10 @@ par = {
   **par, 
   **{
   'grns_dir': f"{env['RESULTS_DIR']}/{args.dataset}/",
-  'write_dir': f"{env['RESULTS_DIR']}/robustness_analysis",
+  'write_dir': f"{env['RESULTS_DIR']}/experiment/permute_grn/",
   'degrees': [0, 10, 20, 50, 100],
   'analysis_types': ['direction', 'weight', "net", "sign"],
-  'methods': ['grnboost', 'ppcor', 'pearson_corr', 'portia', 'scenicplus'],
+  'methods': ['grnboost', 'ppcor', 'pearson_corr', 'portia', 'scenicplus', 'scprint'],
 }
 }
 
@@ -44,6 +44,9 @@ if True:
     for degree in par['degrees']: # run for each degree
       for i, method in enumerate(par['methods']): # run for each method
         par['prediction'] = f"{par['grns_dir']}/{naming_convention(args.dataset, method)}"
+        if not os.path.exists(par['prediction']):
+          print(f"Skipping {par['prediction']} as it does not exist")
+          continue
         par['prediction_n'] = f"{par['write_dir']}/tmp/{args.dataset}_{method}.csv"
         par['degree'] = degree
         par['noise_type'] = noise_type
