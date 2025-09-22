@@ -17,6 +17,8 @@ import io
 import itertools
 import os
 
+
+
 colors_blind = [
           '#E69F00',  # Orange
           '#56B4E9',  # Sky Blue
@@ -86,6 +88,7 @@ surrogate_names = {
     'ws-theta-0.0': "WS (precision)", 
     'ws-theta-0.5': "WS (balanced)", 
     'ws-theta-1.0': "WS (recall)", 
+    'sem': 'SEM',
 
     'op':'OPSCA',
     'nakatake': 'Nakatake', 
@@ -103,7 +106,8 @@ surrogate_names = {
 
     }
 
-ORDERED_METHODS = ['Positive Ctrl', 'Pearson Corr.', 'GRNBoost2', 'Scenic+', 'Scenic' , 'CellOracle', 'FigR', 'GRaNIE', 'scGLUE', 'Portia', 'PPCOR', 'scPRINT', 'Negative Ctrl']
+METHODS = ['pearson_corr', 'positive_control', 'ppcor', 'scprint', 'portia', 'grnboost', 'scenic', 'figr', 'scglue', 'celloracle', 'granie', 'scenicplus',  'negative_control']
+ORDERED_METHODS = [surrogate_names[method] for method in METHODS]
 NEGATIVE_CONTROL = 'Dimethyl Sulfoxide'
 CONTROLS3 = ['Dabrafenib', 'Belinostat', 'Dimethyl Sulfoxide']
 SELECTED_MODELS = [surrogate_names[name] for name in ['ppcor', 'pearson_corr',  'portia', 'grnboost2',  'granie', 'scenicplus', 'scenic']]
@@ -124,10 +128,9 @@ palette_celltype = ['#c4d9b3', '#c5bc8e', '#c49e81', '#c17d88', 'gray', 'lightst
 # - line styles
 linestyle_methods = {key: linestyle for key, linestyle in zip(SELECTED_MODELS, itertools.cycle(['-', '--', '-.', ':']))}
 
-
-
 def retrieve_grn_path(dataset, model):
-
+    env = load_env()
+    TASK_GRN_INFERENCE_DIR = env['TASK_GRN_INFERENCE_DIR']
     return f'{TASK_GRN_INFERENCE_DIR}/resources/results/{dataset}/{dataset}.{model}.{model}.prediction.h5ad'
 
 def determine_fold_change_effect(adata, pseudocount=1e-6):
@@ -610,3 +613,12 @@ def process_trace_local(job_ids_dict):
         
     
     return df_local
+
+def load_env(env_file="../env.yaml"):
+    import yaml
+    def load_config(config_path=env_file):
+        with open(config_path, "r") as f:
+            return yaml.safe_load(f)
+
+    env = load_config()
+    return env

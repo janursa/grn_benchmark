@@ -11,8 +11,7 @@ env = os.environ
 sys.path.insert(0, env['UTILS_DIR'])
 sys.path.insert(0, env['METRICS_DIR'])
 from util import naming_convention, process_links
-from regression_2.helper import main as main_reg2
-from ws_distance.helper import main as main_ws_distance
+from all_metrics.helper import main as main_metrics
 from src.stability_analysis.permute_grn.helper import main as main_impute 
 from src.params import get_par
 
@@ -28,9 +27,9 @@ par = {
   **par, 
   **{
   'grns_dir': f"{env['RESULTS_DIR']}/{args.dataset}/",
-  'write_dir': "resources/results/robustness_analysis",
+  'write_dir': f"{env['RESULTS_DIR']}/robustness_analysis",
   'degrees': [0, 10, 20, 50, 100],
-  'analysis_types': ["net", "sign", 'weight', 'direction'],
+  'analysis_types': ['direction', 'weight', "net", "sign"],
   'methods': ['grnboost', 'ppcor', 'pearson_corr', 'portia', 'scenicplus'],
 }
 }
@@ -38,17 +37,6 @@ par = {
 os.makedirs(par['write_dir'], exist_ok=True)
 os.makedirs(f"{par['write_dir']}/tmp/", exist_ok=True)
 
-
-def run_metrics(par):
-  rr_store = []
-  
-  metric_reg2 = main_reg2(par)
-  rr_store.append(metric_reg2)
-  if args.dataset in ['replogle']:
-    metric_ws =  main_ws_distance(par)
-    rr_store.append(metric_ws)
-  score = pd.concat(rr_store, axis=1)
-  return score 
   
 #------ noise types and degrees ------#
 if True:
@@ -60,12 +48,10 @@ if True:
         par['degree'] = degree
         par['noise_type'] = noise_type
         
-        
         main_impute(par)
-        
         # run regs 
         par['prediction'] = par['prediction_n']
-        score = run_metrics(par)
+        score = main_metrics(par)
         score.index = [method]
         if i==0:
           df_all = score

@@ -48,13 +48,7 @@ if __name__ == '__main__':
     # - consensus 
     par = get_par(dataset)
     par['dataset'] = dataset
-    par['models_dir'] = results_dir
-    par['models'] = all_models
     
-    if False:
-        _ = main_consensus_reg2(par)
-        main_consensus_ws_distance(par)
-
     metrics_all = []
     for model in all_models:
         # - grn evaluation

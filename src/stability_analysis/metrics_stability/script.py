@@ -6,7 +6,10 @@ import json
 import numpy as np
 import pandas as pd
 import os
-env = os.environ
+
+from grn_benchmark.src.helper import load_env
+
+env = load_env()
 RESULTS_DIR = env['RESULTS_DIR']
 TEMP_DIR = f"{RESULTS_DIR}/temp/"
 import sys

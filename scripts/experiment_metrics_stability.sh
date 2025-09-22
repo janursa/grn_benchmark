@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=reg2_gene_wise
+#SBATCH --job-name=metrics_stability
 #SBATCH --output=logs/%j.out
 #SBATCH --error=logs/%j.err
 #SBATCH --ntasks=1

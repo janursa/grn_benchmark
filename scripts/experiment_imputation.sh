@@ -4,7 +4,7 @@
 #SBATCH --error=logs/%j.err
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=20
-#SBATCH --time=60:00:00
+#SBATCH --time=10:00:00
 #SBATCH --mem=250GB
 #SBATCH --partition=cpu
 #SBATCH --mail-type=END,FAIL
@@ -19,7 +19,7 @@ run_imputation=true
 run_grn_inference=true
 run_metrics=true
 
-source ../env.sh
+source env.sh
 output_dir="${RESULTS_DIR}/experiment/imputation"
 output_file="${output_dir}/metrics_${dataset}_${inference_method}.csv"
 
@@ -50,11 +50,8 @@ if [ "$run_grn_inference" = true ]; then
             exit 1
         fi
 
-        if [ "$inference_method" == "pearson_corr" ]; then
-            cd $TASK_GRN_INFERENCE_DIR && python "src/control_methods/pearson_corr/script.py" \
-                --rna "$rna_file" \
-                --prediction "$prediction_file"
-        elif [ "$inference_method" == "grnboost" ]; then
+
+        if [ "$inference_method" == "grnboost" ]; then
             cd $TASK_GRN_INFERENCE_DIR && singularity run $IMAGES_DIR/scenic \
                 python "src/methods/grnboost/script.py" \
                 --rna "$rna_file" \
@@ -85,20 +82,28 @@ if [ "$run_metrics" = true ]; then
     done
 
     echo "Aggregating results..."
-    python <<EOF
+    python - "$output_file" "${score_files[@]}" <<'EOF'
+import anndata as ad
 import pandas as pd
+import sys
 
-score_files = ${score_files[@]}
+output_file = sys.argv[1]
+score_files = sys.argv[2:]  # all remaining args are the score files
 
 results_all = []
 for f in score_files:
-    df = pd.read_hdf(f)  # assuming score.h5ad is an HDF5-backed AnnData
-    df = df.to_df() if hasattr(df, "to_df") else df
+    adata = ad.read_h5ad(f)
+    print(adata.uns)
+    metrics_keys = adata.uns['metric_ids']
+    metrics_values = adata.uns['metric_values']
+    df = {k: [v] for k, v in zip(metrics_keys, metrics_values)}
+    df = pd.DataFrame(df)
+
     df["prediction"] = f
     results_all.append(df)
 
 results = pd.concat(results_all, ignore_index=True)
-results.to_csv("${output_file}", index=False)
+results.to_csv(output_file, index=False)
 EOF
 fi
 

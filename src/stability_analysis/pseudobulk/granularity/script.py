@@ -5,8 +5,11 @@ import sys
 import anndata as ad
 import scanpy as sc
 from tqdm import tqdm
+
 import os
 env = os.environ
+
+assert 'TASK_GRN_INFERENCE_DIR' in env, "Please set the TASK_GRN_INFERENCE_DIR environment variable."
 TASK_GRN_INFERENCE_DIR = env['TASK_GRN_INFERENCE_DIR']
 
 
@@ -18,14 +21,15 @@ sys.path.append(meta["main_dir"])
 meta = {
     "resources_dir": './',
     'util_dir': f'{TASK_GRN_INFERENCE_DIR}/src/utils/',
+    'metrics_dir': f'{TASK_GRN_INFERENCE_DIR}/src/metrics/'
 }
 sys.path.append(meta["resources_dir"])
 sys.path.append(meta["util_dir"])
+sys.path.append(meta["metrics_dir"])
 
-from control_methods.pearson_corr.script import main as main_inference
-from metrics.regression_2.helper import main as main_reg2
-from metrics.ws_distance.helper import main as main_ws_distance
-from metrics.ws_distance.consensus.helper import main as main_consensus_ws_distance
+from methods.pearson_corr.script import main as main_inference
+from all_metrics.helper import main as main_metrics
+# from metrics.ws_distance.consensus.helper import main as main_consensus_ws_distance
 from process_data.helper_data import sum_by
 
 def def_par(dataset):
@@ -74,10 +78,14 @@ if __name__ == '__main__':
     os.makedirs(results_dir, exist_ok=True)
     dataset = 'op'
 
+    INFER_GRN = False
+    PSEUDOBULK = False
+    METRICS = True
+
     par = def_par(dataset)
     degrees = [-1.0, 1.0, 3.0, 5.0, 7.0, 9.0, 11.0, 13.0, 15.0, 17.0, 19.0]
     # - pseudobulk
-    if False:
+    if PSEUDOBULK:
         print('Pseudobulking data...', flush=True)
         par['rna'] = f'{TASK_GRN_INFERENCE_DIR}/resources/grn_benchmark/inference_data/{dataset}_rna.h5ad'
         print(ad.read_h5ad(par['rna']))
@@ -87,7 +95,7 @@ if __name__ == '__main__':
             par['rna_pseudobulked'] = f'{results_dir}/{dataset}_granularity_{granuality}.h5ad'
             main_pseudobulk(par)
     # - infer grns
-    if False:
+    if INFER_GRN:
         print('Inferring GRNs for pseudobulked data...', flush=True)
         for granuality in tqdm(degrees, desc='Inferring GRNs'):
             par['rna'] = f'{results_dir}/{dataset}_granularity_{granuality}.h5ad'
@@ -114,21 +122,15 @@ if __name__ == '__main__':
         # main_consensus_ws_distance(par)
 
     # - grn evaluation
-    if True:
+    if METRICS:
         print('Calculating metrics for pseudobulked data...', flush=True)
         rr_all_store = []
         for granuality in tqdm(degrees, desc='Calculating metrics'):
             print(f"Calculating metrics for {granuality} ...")
             par['prediction'] = prediction_file_name(dataset, granuality)
-            metric_reg2 = main_reg2(par)
-            # _, metric_ws = main_ws_distance(par)
-
-            rr_store = []
-            rr_store.append(metric_reg2)
-            # rr_store.append(metric_ws)
-            rr = pd.concat(rr_store, axis=1)
-            rr['granularity'] = granuality
-            rr_all_store.append(rr)
+            metric_rr = main_metrics(par)
+            metric_rr['granularity'] = granuality
+            rr_all_store.append(metric_rr)
         rr_all = pd.concat(rr_all_store, axis=0)
         rr_all['dataset'] = dataset
         rr_all.to_csv(f'{results_dir}/metrics_{dataset}.csv', index=False)
