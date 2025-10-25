@@ -28,7 +28,7 @@ par = {
   **{
   'grns_dir': f"{env['RESULTS_DIR']}/{args.dataset}/",
   'write_dir': f"{env['RESULTS_DIR']}/experiment/permute_grn/",
-  'degrees': [0, 10, 20, 50, 100],
+  'degrees': [0, 10, 20, 50, 100], #[0, 10, 20, 50, 100],
   'analysis_types': ['direction', 'weight', "net", "sign"],
   'methods': ['grnboost', 'ppcor', 'pearson_corr', 'portia', 'scenicplus', 'scprint'],
 }

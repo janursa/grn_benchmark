@@ -1,11 +1,11 @@
 # env.sh
-export TASK_GRN_INFERENCE_DIR="/home/jnourisa/projs/ongoing/task_grn_inference/"
-export GRN_BENCHMARK_DIR="/home/jnourisa/projs/ongoing/grn_benchmark/"
+export TASK_GRN_INFERENCE_DIR="/home/jnourisa/projs/ongoing/task_grn_inference"
+export GRN_BENCHMARK_DIR="/home/jnourisa/projs/ongoing/grn_benchmark"
 export PYTHONPATH="$GRN_BENCHMARK_DIR:${PYTHONPATH:-}"
 
-export RESULTS_DIR="${TASK_GRN_INFERENCE_DIR}/resources/results/"
-export IMAGES_DIR="/home/jnourisa/projs/images/"
-export RESOURCES_DIR="${TASK_GRN_INFERENCE_DIR}/resources/"
+export RESULTS_DIR="${TASK_GRN_INFERENCE_DIR}/resources/results"
+export IMAGES_DIR="/home/jnourisa/projs/images"
+export RESOURCES_DIR="${TASK_GRN_INFERENCE_DIR}/resources"
 export INFERENCE_DIR="${RESOURCES_DIR}/grn_benchmark/inference_data"
 export EVALUATION_DIR="${RESOURCES_DIR}/grn_benchmark/evaluation_data"
 export PRIOR_DIR="${RESOURCES_DIR}/grn_benchmark/prior"

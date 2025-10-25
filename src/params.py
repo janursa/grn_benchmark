@@ -36,6 +36,10 @@ def get_par(dataset):
         'ws_distance_background': f"{env['PRIOR_DIR']}/ws_distance_background_{dataset}.csv",
         'regulators_consensus': f"{env['PRIOR_DIR']}/regulators_consensus_{dataset}.json",
         'ws_consensus': f"{env['PRIOR_DIR']}/ws_consensus_{dataset}.csv",
+        'evaluation_data_de': f"{env['EVALUATION_DIR']}/{dataset}_de.h5ad",
         
     }
+    if dataset in ['replogle', 'adamson', 'norman']:
+        par['ground_truth'] = f"{env['TASK_GRN_INFERENCE_DIR']}/resources/grn_benchmark/ground_truth/K562.csv"
+        
     return par
