@@ -16,7 +16,7 @@ import sys
 sys.path.append(env['UTILS_DIR'])
 from util import naming_convention, process_links
 sys.path.append(env['METRICS_DIR'])
-from regression_2.helper import cross_validate, net_to_matrix, LabelEncoder, RobustScaler
+from regression.helper import cross_validate, net_to_matrix, LabelEncoder, RobustScaler
 from ws_distance.helper import main as main_ws_distance
 
 from src.params import get_par as get_base_par
@@ -122,6 +122,6 @@ if __name__ == '__main__':
         scores_ws = ws_func(par)
         scores_ws['dataset'] = dataset
         scores_ws.to_csv(ws_output)
-    print('Run regression 2 gene-wise analysis')
+    print('Run Regression gene-wise analysis')
     scores_reg2 = reg2_func(par)
     scores_reg2.to_csv(gene_wise_output)

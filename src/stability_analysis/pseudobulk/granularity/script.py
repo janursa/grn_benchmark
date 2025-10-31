@@ -110,7 +110,7 @@ if __name__ == '__main__':
         print('Calculating consensus for pseudobulked data...', flush=True)
         def naming_convention(dataset, model):
             return f'{dataset}.{model}.h5ad'
-        from src.metrics.regression_2.consensus.helper import main as main_consensus_reg2
+        from src.metrics.regression.consensus.helper import main as main_consensus_reg2
         par['naming_convention'] = naming_convention
         par['dataset'] = dataset
         par['models_dir'] = results_dir

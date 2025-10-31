@@ -20,8 +20,8 @@ sys.path.append(meta["util_dir"])
 
 # from src.methods.pearson_corr.script import main as main_inference
 from all_metrics.helper import main as main_metrics
-from ws_distance.consensus.helper import main as main_consensus_ws_distance
-from regression_2.consensus.helper import main as main_consensus_reg2
+# from ws_distance.consensus.helper import main as main_consensus_ws_distance
+# from regression.consensus.helper import main as main_consensus_reg2
 
 def def_par(dataset):
     par = {

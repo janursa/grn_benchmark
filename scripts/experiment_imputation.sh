@@ -15,8 +15,8 @@ set -euo pipefail
 dataset=$1
 inference_method=$2
 imputation_methods=("original" "knn" "magic")
-run_imputation=true
-run_grn_inference=true
+run_imputation=false
+run_grn_inference=false
 run_metrics=true
 
 source env.sh

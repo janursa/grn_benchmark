@@ -80,6 +80,14 @@ surrogate_names = {
     'negative_control':'Negative Ctrl',
     'scgpt': 'scGPT',
 
+    'regression': 'Regression',
+    'ws_distance': 'Wasserstein (WS) Distance',
+    'sem': 'Structural Equation Modeling (SEM)',
+    'tf_recovery': 'TF Recovery',
+    'tf_binding': 'TF Binding',
+    'replica_consistency': 'Replica Consistency',
+    
+
     'r2-theta-0.0': "R2 (precision)", 
     'r2-theta-0.5': "R2 (balanced)", 
     'r2-theta-1.0': "R2 (recall)", 
@@ -111,7 +119,20 @@ surrogate_names = {
     'xaira_HEK293T': 'Xaira:HEK293T',
     'parsebioscience': 'ParseBioscience',
     'ibd': 'IBD',
-    '300BCG': '300BCG'
+    '300BCG': '300BCG',
+
+    'bulk': 'Bulk',
+    'sc': 'Single cell',
+    'de': 'Differential expression',
+
+    'prediction': 'Inferred GRN',
+    'evaluation_data': 'Evaluation data',
+    'tf_all': 'Known TFs list',
+    'regulators_consensus': 'Consensus regulators (Regression)',
+    'ws_consensus': 'Consensus edges (WS distance)',
+    'ws_distance_background': 'WS distance background scores',
+    'evaluation_data_de': 'Differential expression data',
+    'ground_truth': 'Ground truth'
 
     }
 
@@ -645,6 +666,8 @@ def read_yaml_raw(file_path):
     record_store = []
     for entry in yaml_content:
         dataset_id = entry['dataset_id']
+        if dataset_id == 'None':
+            continue
         method_id = entry['method_id']
         metric_ids = entry['metric_ids']
         metric_values = entry['metric_values']
@@ -659,13 +682,17 @@ def read_yaml_raw(file_path):
     
     return df
 def pivot_table(df):
+    # print(df.groupby(['dataset_id', 'method_id']).size().sort_values(ascending=False))
+    print(df[df['method_id']=='scprint'])
     df = df.pivot(index=['dataset_id', 'method_id'], columns='metric_id', values='metric_value').reset_index()
     df.rename(columns={'dataset_id': 'dataset', 'method_id': 'model'}, inplace=True)
     return df
 def read_yaml(file_path):
     df = read_yaml_raw(file_path).reset_index()
-    
-    df = df[df['dataset_id']!= 'missing']
+
+    df = df[(df['dataset_id']!= 'missing') ]
+    df = df[df['metric_value'] != "None"]
+    df = df[df['method_id']!='scprint']
     df = pivot_table(df)
     return df
 
