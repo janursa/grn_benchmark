@@ -8,22 +8,61 @@
 #SBATCH --mem=250GB
 #SBATCH --partition=cpu
 
-source ../env.sh
-dataset=$1
-gene_wise_output=$2
-ws_output=$3
+source env.sh
+
+# Initialize variables
+dataset=""
+gene_wise_output=""
+ws_output=""
+
+# Parse command-line arguments
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --dataset)
+      dataset="$2"
+      shift 2
+      ;;
+    --gene_wise_output)
+      gene_wise_output="$2"
+      shift 2
+      ;;
+    --gene_wise_feature_importance)
+      gene_wise_feature_importance="$2"
+      shift 2
+      ;;
+    --ws_output)
+      ws_output="$2"
+      shift 2
+      ;;
+    *)
+      echo "Unknown option: $1"
+      echo "Usage: sbatch experiment_metrics_stability.sh --dataset <dataset> [--gene_wise_output <path>] [--ws_output <path>]"
+      exit 1
+      ;;
+  esac
+done
+
+# Check required argument
 if [ -z "$dataset" ]; then
-  echo "Usage: sbatch sbatch.sh <dataset>"
-  exit 1
-fi
-if [ -z "$gene_wise_output" ]; then
-  echo "Usage: sbatch sbatch.sh <dataset> <gene_wise_output>"
-  exit 1
-fi
-if [ -z "$ws_output" ]; then
-  echo "Usage: sbatch sbatch.sh <dataset> <gene_wise_output> <ws_output>"
+  echo "Error: --dataset is required"
+  echo "Usage: sbatch experiment_metrics_stability.sh --dataset <dataset> [--gene_wise_output <path>] [--ws_output <path>]"
   exit 1
 fi
 
-echo "Running stability analysis on dataset: $dataset and outputting to: $gene_wise_output and $ws_output"
-python src/stability_analysis/metrics_stability/script.py --dataset $dataset --gene_wise_output $gene_wise_output --ws_output $ws_output
+echo "Running stability analysis on dataset: $dataset and outputting to: $gene_wise_feature_importance and $ws_output"
+
+# Build command with only provided arguments
+cmd="python src/stability_analysis/metrics_stability/script.py --dataset $dataset"
+if [ -n "$gene_wise_feature_importance" ]; then
+  cmd="$cmd --gene_wise_feature_importance $gene_wise_feature_importance"
+fi
+if [ -n "$gene_wise_output" ]; then
+  cmd="$cmd --gene_wise_output $gene_wise_output"
+fi
+if [ -n "$ws_output" ]; then
+  cmd="$cmd --ws_output $ws_output"
+fi
+
+echo $cmd
+# Execute the command
+eval $cmd

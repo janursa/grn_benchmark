@@ -17,6 +17,8 @@ import io
 import itertools
 import os
 
+from task_grn_inference.src.utils.config import DATASETS, METHODS
+
 
 
 colors_blind = [
@@ -79,6 +81,7 @@ surrogate_names = {
     'positive_control':'Positive Ctrl',
     'negative_control':'Negative Ctrl',
     'scgpt': 'scGPT',
+    'spearman_corr': 'Spearman Corr.',
 
     'regression': 'Regression',
     'ws_distance': 'Wasserstein (WS) Distance',
@@ -88,9 +91,9 @@ surrogate_names = {
     'replica_consistency': 'Replica Consistency',
     
 
-    'r2-theta-0.0': "R2 (precision)", 
-    'r2-theta-0.5': "R2 (balanced)", 
-    'r2-theta-1.0': "R2 (recall)", 
+    'r2-theta-0.1': "R (precision)", 
+    'r2-theta-0.5': "R (balanced)", 
+    'r2-theta-1.0': "R (recall)", 
 
     'r1_all': "R1 (all)",
     'r1_grn': "R1 (grn)",
@@ -98,15 +101,19 @@ surrogate_names = {
     'ws-theta-0.5': "WS (balanced)", 
     'ws-theta-1.0': "WS (recall)", 
     'sem': 'SEM',
-    'tfb_grn': 'TF binding (precision)',
-    'tfb_all': 'TF binding (recall)',
-    'replica_consistency_precision': 'Replica consistency (precision)',
-    'replica_consistency_balanced': 'Replica consistency (balanced)',
+    # 'tfb_grn': 'TF binding (precision)',
+    # 'tfb_all': 'TF binding (recall)',
+    'replica_consistency_precision': 'RC (precision)',
+    'replica_consistency_balanced': 'RC (balanced)',
     'sem_precision': 'SEM (precision)',
     'sem_balanced': 'SEM (balanced)',
     't_rec_precision': 'TF recovery (precision)',
     't_rec_recall': 'TF recovery (recall)',
-
+    'rc_tf_act_precision': 'RC TF activity (precision)',
+    'rc_tf_act_balanced': 'RC TF activity (balanced)',
+    'rc_tf_act_recall': 'RC TF activity (recall)',
+    'tfb_grn_norm': 'TF binding (precision)',
+    'tfb_all_norm': 'TF binding (recall)',
     'op':'OPSCA',
     'nakatake': 'Nakatake', 
     'norman': 'Norman', 
@@ -118,7 +125,8 @@ surrogate_names = {
     'xaira_HCT116': 'Xaira:HCT116',
     'xaira_HEK293T': 'Xaira:HEK293T',
     'parsebioscience': 'ParseBioscience',
-    'ibd': 'IBD',
+    'ibd_UC': 'IBD:UC',
+    'ibd_CD': 'IBD:CD',
     '300BCG': '300BCG',
 
     'bulk': 'Bulk',
@@ -136,17 +144,10 @@ surrogate_names = {
 
     }
 
-METHODS = ['pearson_corr', 'positive_control', 'ppcor', 'scprint', 'scgpt', 'portia', 'grnboost', 'scenic', 'figr', 'scglue', 'celloracle', 'granie', 'scenicplus',  'negative_control']
-ORDERED_METHODS = [surrogate_names[method] for method in METHODS]
 NEGATIVE_CONTROL = 'Dimethyl Sulfoxide'
 CONTROLS3 = ['Dabrafenib', 'Belinostat', 'Dimethyl Sulfoxide']
 SELECTED_MODELS = [surrogate_names[name] for name in ['ppcor', 'pearson_corr',  'portia', 'grnboost2',  'granie', 'scenicplus', 'scenic']]
-DATASETS = ['op', 'replogle', 'nakatake', 'norman', 'adamson', 'xaira_HCT116', 'xaira_HEK293T', 'parsebioscience', 'ibd', '300BCG']
-ORDERED_METRICS = ['r2-theta-0.0', 'r2-theta-0.5', 'r2-theta-1.0',
-       'ws-theta-0.0', 'ws-theta-0.5', 'ws-theta-1.0', 
-       'sem_precision', 'sem_balanced', 
-       'replica_consistency_precision', 'replica_consistency_balanced', 
-       't_rec_precision', 't_rec_recall']
+
 
 if False:
     collectRI = pd.read_csv("https://github.com/pablormier/omnipath-static/raw/main/op/collectri-26.09.2023.zip")
@@ -250,18 +251,36 @@ def plot_heatmap(scores, ax=None, name='', fmt='0.02f', cmap="viridis"):
     if ax is None:
         fig, ax = plt.subplots(1, 1, figsize=(4, 4), sharey=True)
 
-    scores_normalized = scores.apply(lambda x: (x - np.nanmin(x)) / (np.nanmax(x) - np.nanmin(x)), axis=0)
+    # Ensure numeric values first
+    scores = scores.apply(pd.to_numeric, errors='coerce')
+    
+    # Normalize column-wise with guards for edge cases
+    def safe_normalize(x):
+        x_min = np.nanmin(x)
+        x_max = np.nanmax(x)
+        # If all values are the same or all NaN, return 0.5 (middle of colormap)
+        if np.isnan(x_min) or np.isnan(x_max) or x_max == x_min:
+            return pd.Series([0.5] * len(x), index=x.index)
+        # Otherwise normalize
+        return (x - x_min) / (x_max - x_min)
+    
+    scores_normalized = scores.apply(safe_normalize, axis=0)
     scores_normalized = scores_normalized.round(2)
+    
     vmin = 0
     vmax = 1
-    scores_normalized = scores_normalized.apply(pd.to_numeric, errors='coerce')
     seaborn.heatmap(scores_normalized, ax=ax, square=False, cbar=False, annot=True, fmt=fmt, vmin=vmin, vmax=vmax, cmap=cmap)
+    
+    # Replace annotations with original values
     for text, (i, j) in zip(ax.texts, np.ndindex(scores.shape)):
         value = scores.iloc[i, j]
-        if isinstance(value, np.int64):  # Check if the value is an integer for 'Rank'
+        if pd.isna(value):
+            text.set_text('NaN')
+        elif isinstance(value, (np.int64, int)):  # Check if the value is an integer for 'Rank'
             text.set_text(f'{value:d}')
         else:
             text.set_text(f'{value:.2f}')
+    
     ax.tick_params(left=False, bottom=False)
     ax.xaxis.set_tick_params(width=0)
     ax.yaxis.set_tick_params(width=0)
@@ -270,7 +289,8 @@ def plot_heatmap(scores, ax=None, name='', fmt='0.02f', cmap="viridis"):
     ax.xaxis.set_label_position('top')
     ax.xaxis.tick_top()
     ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='left')
-def custom_jointplot(data, x, y, hue, ax, scatter_kws=None, kde_kws={"fill": True, "common_norm": False, "alpha": 0.4}, alpha=0.5, top_plot=True):
+def custom_jointplot(data, x, y, hue, ax, scatter_kws=None, 
+    kde_kws={"fill": True, "common_norm": False, "alpha": 0.4}, alpha=0.5, top_plot=True):
 
     from mpl_toolkits.axes_grid1 import make_axes_locatable
 
@@ -648,7 +668,7 @@ def process_trace_local(job_ids_dict):
     
     return df_local
 
-def load_env(env_file="../env.yaml"):
+def load_env(env_file="env.yaml"):
     import yaml
     def load_config(config_path=env_file):
         with open(config_path, "r") as f:
@@ -662,7 +682,6 @@ def read_yaml_raw(file_path):
     import yaml
     with open(file_path, 'r') as file:
         yaml_content = yaml.safe_load(file)
-    print(yaml_content)
     record_store = []
     for entry in yaml_content:
         dataset_id = entry['dataset_id']
@@ -683,7 +702,6 @@ def read_yaml_raw(file_path):
     return df
 def pivot_table(df):
     # print(df.groupby(['dataset_id', 'method_id']).size().sort_values(ascending=False))
-    print(df[df['method_id']=='scprint'])
     df = df.pivot(index=['dataset_id', 'method_id'], columns='metric_id', values='metric_value').reset_index()
     df.rename(columns={'dataset_id': 'dataset', 'method_id': 'model'}, inplace=True)
     return df
@@ -692,17 +710,23 @@ def read_yaml(file_path):
 
     df = df[(df['dataset_id']!= 'missing') ]
     df = df[df['metric_value'] != "None"]
-    df = df[df['method_id']!='scprint']
+    # print(df.groupby(['dataset_id', 'method_id']).size().sort_values(ascending=False))
+    # print(df[df['method_id']=='geneformer'])
+    # print(df[df['method_id']=='grnboost'])
+    # df = df[df['method_id']!='scprint']
     df = pivot_table(df)
     return df
 
 
 def plot_raw_scores(scores_mat, ax):
     scores_mat = scores_mat.dropna(how='all', axis=1)
-    scores_mat.columns = scores_mat.columns.map(lambda name: surrogate_names.get(name, name))
-    scores_mat.index = scores_mat.index.map(lambda name: surrogate_names.get(name, name))
-    available_methods = [method for method in ORDERED_METHODS if method in scores_mat.index]
+    
+    available_methods = [method for method in METHODS if method in scores_mat.index]
     scores_mat = scores_mat.loc[available_methods]
+    scores_mat.index = scores_mat.index.map(lambda name: surrogate_names.get(name, name))
+    scores_mat.columns = scores_mat.columns.map(lambda name: surrogate_names.get(name, name))
+    
+    
     plot_heatmap(scores_mat.fillna(0), name='', ax=ax, cmap="viridis")
     ax.set_yticklabels(ax.get_yticklabels(), rotation=0, ha='right')
     ax.set_ylabel('')

@@ -17,6 +17,7 @@ sys.path.append(env['UTILS_DIR'])
 from util import naming_convention, process_links
 sys.path.append(env['METRICS_DIR'])
 from regression.helper import cross_validate, net_to_matrix, LabelEncoder, RobustScaler
+from regression.helper import main as main_reg
 from ws_distance.helper import main as main_ws_distance
 
 from src.params import get_par as get_base_par
@@ -32,7 +33,7 @@ def get_par(dataset):
     }}
     return par
 
-def reg2_func(par):
+def feature_importance_func(par):
     perturb_data = ad.read_h5ad(par['evaluation_data'])
     gene_names = perturb_data.var_names
     reg_type = par['reg_type'] 
@@ -47,7 +48,7 @@ def reg2_func(par):
         for donor_id in perturb_data.obs.donor_id.unique():
             perturb_data_sub = perturb_data[perturb_data.obs.donor_id == donor_id]
         
-            net_matrix = net_to_matrix(net, gene_names, par)
+            net_matrix = net_to_matrix(net, gene_names)
             n_cells = perturb_data_sub.shape[0]
             random_groups = np.random.choice(range(1, 5+1), size=n_cells, replace=True) # random sampling
             groups = LabelEncoder().fit_transform(random_groups)
@@ -95,6 +96,16 @@ def reg2_func(par):
     return scores_store
 
 
+def reg_func(par):
+    scores_store = []
+    for i_model, model in enumerate(par['grn_models']):
+        par['prediction'] = f"{par['grn_models_dir']}/{naming_convention(dataset, model)}"
+        rr_fleshed_out, _ = main_reg(par)
+        rr_fleshed_out['model'] = model
+        scores_store.append(rr_fleshed_out)
+    scores_store = pd.concat(scores_store)
+    return scores_store
+
 def ws_func(par):
     scores_store = []
     for i_model, model in enumerate(par['grn_models']):
@@ -108,20 +119,29 @@ def ws_func(par):
 if __name__ == '__main__':
     args = argparse.ArgumentParser()
     args.add_argument('--dataset', type=str)
-    args.add_argument('--gene_wise_output', type=str)
-    args.add_argument('--ws_output', type=str)
+    args.add_argument('--gene_wise_output', type=str, default=None)
+    args.add_argument('--ws_output', type=str, default=None)
+    args.add_argument('--gene_wise_feature_importance', type=str, default=None)
+
     args = args.parse_args()
     dataset = args.dataset
     gene_wise_output = args.gene_wise_output
+    gene_wise_feature_importance = args.gene_wise_feature_importance
+    
     ws_output = args.ws_output
     par = get_par(dataset)
+
     os.makedirs(par['temp_dir'], exist_ok=True)
-    
-    if dataset in ['replogle']:
+    if ws_output is not None:
         print('Run ws distance analysis')
         scores_ws = ws_func(par)
         scores_ws['dataset'] = dataset
         scores_ws.to_csv(ws_output)
-    print('Run Regression gene-wise analysis')
-    scores_reg2 = reg2_func(par)
-    scores_reg2.to_csv(gene_wise_output)
+    if gene_wise_output is not None:
+        print('Run Regression gene-wise analysis')
+        scores_reg = reg_func(par)
+        scores_reg.to_csv(gene_wise_output)
+    if gene_wise_feature_importance is not None:
+        print('Run Gene-wise Feature Importance analysis')
+        scores_feature_importance = feature_importance_func(par)
+        scores_feature_importance.to_csv(gene_wise_feature_importance)

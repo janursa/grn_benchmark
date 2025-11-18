@@ -4,14 +4,13 @@
 #SBATCH --error=logs/%j.err
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=20
-#SBATCH --time=20:00:00
+#SBATCH --time=2-00:00:00
 #SBATCH --mem=250GB
 #SBATCH --partition=cpu
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=jalil.nourisa@gmail.com
 
 set -euo pipefail
-
 dataset=$1
 
 if [ -z "$dataset" ]; then
@@ -19,9 +18,7 @@ if [ -z "$dataset" ]; then
     exit 1
 fi
 
-
-
-inference_methods=( "pearson_corr" "grnboost" "scenic" "ppcor" )
+inference_methods=("portia" "pearson_corr" "grnboost" "scenic" "ppcor") # ( "pearson_corr" "grnboost" "scenic" )
 layer='pearson_residual'
 run_grn_inference=false
 run_metrics=true
@@ -30,8 +27,6 @@ source env.sh
 output_dir="${RESULTS_DIR}/experiment/normalization"
 mkdir -p "$output_dir"
 output_file="${output_dir}/metrics_${dataset}.csv"
-
-
 
 if [ "$run_grn_inference" = true ]; then
     run_type='sbatch'

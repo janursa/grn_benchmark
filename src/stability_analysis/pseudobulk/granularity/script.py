@@ -78,8 +78,8 @@ if __name__ == '__main__':
     os.makedirs(results_dir, exist_ok=True)
     dataset = 'op'
 
-    INFER_GRN = False
-    PSEUDOBULK = False
+    INFER_GRN = True
+    PSEUDOBULK = True
     METRICS = True
 
     par = def_par(dataset)

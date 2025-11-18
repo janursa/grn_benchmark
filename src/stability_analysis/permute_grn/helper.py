@@ -5,9 +5,10 @@ import sys
 import anndata as ad
 
 
-from util import process_links
+from util import naming_convention, process_links
 
-def main(par):
+
+def impute_fun(par):
   net = ad.read_h5ad(par['prediction'])
   prediction = pd.DataFrame(net.uns['prediction'])
   prediction = process_links(prediction, par={'max_n_links': 50_000})
@@ -55,4 +56,38 @@ def main(par):
   net.write(par['prediction_n'])
 
 
+def main_metrics(par):
+    from all_metrics.helper import main as main_metrics
+    # from sem.helper import main as main_sem
+    # from rc.helper import main as main_rc
+    # from rc_tf_act.helper import main as main_rc_tf_act
+    # rr = main_rc_tf_act(par)
+    rr = main_metrics(par)
+    return rr
 
+def main(par):
+  os.makedirs(par['write_dir'], exist_ok=True)
+  os.makedirs(f"{par['write_dir']}/tmp/", exist_ok=True)
+  #------ noise types and degrees ------#
+  for noise_type in par['analysis_types']: # run for each noise type (net, sign, weight)
+    for degree in par['degrees']: # run for each degree
+      for i, method in enumerate(par['methods']): # run for each method
+        par['prediction'] = f"{par['grns_dir']}/{naming_convention(par['dataset'], method)}"
+        if not os.path.exists(par['prediction']):
+          print(f"Skipping {par['prediction']} as it does not exist")
+          continue
+        par['prediction_n'] = f"{par['write_dir']}/tmp/{par['dataset']}_{method}.csv"
+        par['degree'] = degree
+        par['noise_type'] = noise_type
+        
+        impute_fun(par)
+        # run regs 
+        par['prediction'] = par['prediction_n']
+        score = main_metrics(par)
+        score.index = [method]
+        if i==0:
+          df_all = score
+        else:
+          df_all = pd.concat([df_all, score])
+        print(noise_type, degree, df_all)
+        df_all.to_csv(f"{par['write_dir']}/{par['dataset']}-{noise_type}-{degree}-scores.csv")
