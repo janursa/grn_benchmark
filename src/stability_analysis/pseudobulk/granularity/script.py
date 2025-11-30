@@ -31,24 +31,25 @@ from methods.pearson_corr.script import main as main_inference
 from all_metrics.helper import main as main_metrics
 # from metrics.ws_distance.consensus.helper import main as main_consensus_ws_distance
 from process_data.helper_data import sum_by
+from src.params import get_par
 
-def def_par(dataset):
-    par = {
-        'evaluation_data': f'{TASK_GRN_INFERENCE_DIR}/resources/grn_benchmark/evaluation_data/{dataset}_bulk.h5ad',
-        'tf_all': f'{TASK_GRN_INFERENCE_DIR}/resources/grn_benchmark/prior/tf_all.csv',
-        'apply_skeleton': False,
-        'apply_tf': True,
-        'max_n_links': 50000,
-        'layer': 'lognorm',
-        'apply_tf_methods': True,
-        'reg_type': 'ridge',
-        'num_workers': 10,
-        'ws_consensus': f'{TASK_GRN_INFERENCE_DIR}/resources/grn_benchmark/prior/ws_consensus_{dataset}.csv',
-        'ws_distance_background': f'{TASK_GRN_INFERENCE_DIR}/resources/grn_benchmark/prior/ws_distance_background_{dataset}.csv',
-        'evaluation_data_sc': f'{TASK_GRN_INFERENCE_DIR}/resources/processed_data/{dataset}_sc.h5ad'
+# def def_par(dataset):
+#     par = {
+#         'evaluation_data': f'{TASK_GRN_INFERENCE_DIR}/resources/grn_benchmark/evaluation_data/{dataset}_bulk.h5ad',
+#         'tf_all': f'{TASK_GRN_INFERENCE_DIR}/resources/grn_benchmark/prior/tf_all.csv',
+#         'apply_skeleton': False,
+#         'apply_tf': True,
+#         'max_n_links': 50000,
+#         'layer': 'lognorm',
+#         'apply_tf_methods': True,
+#         'reg_type': 'ridge',
+#         'num_workers': 10,
+#         'ws_consensus': f'{TASK_GRN_INFERENCE_DIR}/resources/grn_benchmark/prior/ws_consensus_{dataset}.csv',
+#         'ws_distance_background': f'{TASK_GRN_INFERENCE_DIR}/resources/grn_benchmark/prior/ws_distance_background_{dataset}.csv',
+#         'evaluation_data_sc': f'{TASK_GRN_INFERENCE_DIR}/resources/processed_data/{dataset}_sc.h5ad'
 
-    }
-    return par
+#     }
+#     return par
 def prediction_file_name(dataset, granularity):
     return f'{results_dir}/{dataset}.prediction_{granularity}.h5ad'
 
@@ -78,11 +79,11 @@ if __name__ == '__main__':
     os.makedirs(results_dir, exist_ok=True)
     dataset = 'op'
 
-    INFER_GRN = True
-    PSEUDOBULK = True
+    INFER_GRN = False
+    PSEUDOBULK = False
     METRICS = True
 
-    par = def_par(dataset)
+    par = get_par(dataset)
     degrees = [-1.0, 1.0, 3.0, 5.0, 7.0, 9.0, 11.0, 13.0, 15.0, 17.0, 19.0]
     # - pseudobulk
     if PSEUDOBULK:
@@ -105,8 +106,9 @@ if __name__ == '__main__':
             net.write_h5ad(par['prediction'])
     
     # - consensus 
-    par['regulators_consensus'] = f'{results_dir}/regulators_consensus_{dataset}.json'
+    
     if False:
+        par['regulators_consensus'] = f'{results_dir}/regulators_consensus_{dataset}.json'
         print('Calculating consensus for pseudobulked data...', flush=True)
         def naming_convention(dataset, model):
             return f'{dataset}.{model}.h5ad'
@@ -120,7 +122,8 @@ if __name__ == '__main__':
     
         # par['ws_consensus'] = f'{results_dir}/ws_consensus_{dataset}.json'
         # main_consensus_ws_distance(par)
-
+    else:
+        par['regulators_consensus'] =  f'{TASK_GRN_INFERENCE_DIR}/resources/grn_benchmark/prior/regulators_consensus_{dataset}.json'
     # - grn evaluation
     if METRICS:
         print('Calculating metrics for pseudobulked data...', flush=True)

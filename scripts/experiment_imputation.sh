@@ -13,11 +13,11 @@
 set -euo pipefail
 
 dataset=$1
-imputation_methods=("original" "knn" "magic")
-inference_methods=('grnboost' 'pearson_corr')
+imputation_methods=("magic") #"original" "knn" "magic"
+inference_methods=('grnboost') #'grnboost' 'pearson_corr'
 run_imputation=false
-run_grn_inference=false
-run_metrics=true
+run_grn_inference=true
+run_metrics=false
 
 source env.sh
 output_dir="${RESULTS_DIR}/experiment/imputation"
@@ -46,16 +46,13 @@ if [ "$run_grn_inference" = true ]; then
                 exit 1
             fi
 
+            script_file="src/methods/${inference_method}/run_local.sh"
+        
+            cd $TASK_GRN_INFERENCE_DIR && sbatch "$script_file" \
+                --rna "$rna_file" \
+                --prediction "$prediction_file" 
 
-            if [ "$inference_method" == "grnboost" ]; then
-                cd $TASK_GRN_INFERENCE_DIR && singularity run $IMAGES_DIR/scenic \
-                    python "src/methods/grnboost/script.py" \
-                    --rna "$rna_file" \
-                    --prediction "$prediction_file"
-            else
-                echo "Unknown inference method: $inference_method"
-                exit 1
-            fi
+            
         done
     done
 fi

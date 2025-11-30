@@ -24,15 +24,22 @@ from src.params import get_par
 
 def naming_convention(dataset, model):
     return f'{dataset}.{model}.h5ad'
+    
 
 if __name__ == '__main__':
-    dataset = 'op'
+    import argparse
+    
+    parser = argparse.ArgumentParser(description='Evaluate global GRNs')
+    parser.add_argument('--dataset', type=str, required=True, help='Dataset name (e.g., op, 300BCG)')
+    args = parser.parse_args()
+    
+    dataset = args.dataset
     results_dir = f'{RESULTS_DIR}/experiment/global_grns/'
     os.makedirs(results_dir, exist_ok=True)
     global_grn_dir = f'{TASK_GRN_INFERENCE_DIR}/resources/grn_models/global/'
-
+    
     global_grns = os.listdir(global_grn_dir) #all the files in the global_grn_dir
-    inferred_methods = ['pearson_corr', 'grnboost', 'scenicplus']
+    inferred_methods = ['negative_control', 'pearson_corr', 'grnboost', 'scenicplus']
     all_models = inferred_methods + global_grns
 
     for name in global_grns:
@@ -58,4 +65,4 @@ if __name__ == '__main__':
         metric_rr['model'] = model
         metrics_all.append(metric_rr)
     metrics_all = pd.concat(metrics_all, axis=0)
-    metrics_all.to_csv(f'{results_dir}/metrics_all.csv', index=False)
+    metrics_all.to_csv(f'{results_dir}/metrics_{dataset}.csv', index=False)

@@ -28,6 +28,9 @@ dataset_masks = ['ctr', 'pert', 'both']
 GRN_INFERENCE = False
 EVALUATION = True
 
+rr_dir = f"{env['RESULTS_DIR']}/experiment/causality/"
+os.makedirs(rr_dir, exist_ok=True)
+
 def main_inference(par, adata, d_mask):
     tf_all = np.loadtxt(par["tf_all"], dtype=str)
     net = corr_net(adata, tf_all, par)
@@ -45,7 +48,7 @@ def main_inference(par, adata, d_mask):
 scores_store = []
 for dataset in ['xaira_HEK293T', 'xaira_HCT116', 'replogle']:
     par = get_par(dataset)
-    write_dir = f"{env['RESULTS_DIR']}/experiment/causality/{dataset}"
+    write_dir = f"{rr_dir}/{dataset}"
     os.makedirs(write_dir, exist_ok=True)
     os.makedirs(f"{write_dir}/tmp/", exist_ok=True)
 
@@ -98,4 +101,4 @@ for dataset in ['xaira_HEK293T', 'xaira_HCT116', 'replogle']:
 if len(scores_store) > 0:
     scores_df = pd.concat(scores_store)
     print("Writing scores...", flush=True)
-    scores_df.to_csv(f"{write_dir}/{dataset}-scores.csv")
+    scores_df.to_csv(f"{rr_dir}/scores.csv")

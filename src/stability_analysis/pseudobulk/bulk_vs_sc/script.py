@@ -77,7 +77,7 @@ def infer_grn(par, dataset):
 if __name__ == '__main__':
     results_dir = f'{RESULT_DIR}/experiment/bulk_vs_sc/'
     os.makedirs(results_dir, exist_ok=True)
-    datasets = ['replogle', 'xaira_HEK293T', 'xaira_HCT116'] #'replogle', 'xaira_HEK293T', 'xaira_HCT116' , 'parsebioscience' #RUN per dataset seperately
+    datasets = ['xaira_HEK293T', 'xaira_HCT116', 'replogle'] #'replogle', 'xaira_HEK293T', 'xaira_HCT116' , 'parsebioscience' #RUN per dataset seperately
     RUN_GRN_INFERNCE = True
     RUN_METRICS = True
 

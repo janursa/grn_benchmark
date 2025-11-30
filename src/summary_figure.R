@@ -29,25 +29,38 @@ summary_all <- read_tsv(file_path)
 ##################################################
 
 # Add the new column for method types
+# Using exact surrogate names from Python config:
+# FINAL_METRICS: r_precision, r_recall, vc, sem, ws_precision, ws_recall, t_rec_precision, t_rec_recall, rc_tf_act, tfb_f1, gs_f1
+# Their surrogate names: R (precision), R (recall), Virtual cell, SEM, WS (precision), WS (recall), TF recovery (precision), TF recovery (recall), Replica consistency, TF binding, Gene sets
 column_info <- bind_rows(
   tribble(
     ~id, ~id_color, ~name, ~group, ~geom, ~palette, ~options,
     "method_name", NA_character_, "Name", "method", "text", NA_character_, list(width = 6, hjust = 0),
     "method_type", NA_character_, "Modality", "method", "text", NA_character_, list(width = 2, hjust = 0),
     "overall_score", "overall_score", "Score", "overall", "bar", "overall", list(width = 4),
-    "R1 (all)", "R1 (all)", "R1 (all)", "metric_1", "funkyrect",  "metric_1", list(width = 2),
-    "R1 (grn)", "R1 (grn)", "R1 (grn)", "metric_1", "funkyrect",  "metric_1", list(width = 2),
-    "R2 (precision)", "R2 (precision)", "R2 (precision)", "metric_1", "funkyrect",  "metric_1", list(width = 2),
-    "R2 (balanced)", "R2 (balanced)", "R2 (balanced)", "metric_1", "funkyrect",  "metric_1", list(width = 2),
-    "R2 (recall)", "R2 (recall)", "R2 (recall)", "metric_1", "funkyrect",  "metric_1", list(width = 2), 
-    "WS (precision)", "WS (precision)", "WS (precision)", "metric_1", "funkyrect",  "metric_1", list(width = 2),
-    "WS (balanced)", "WS (balanced)", "WS (balanced)", "metric_1", "funkyrect",  "metric_1", list(width = 2),
-    "WS (recall)", "WS (recall)", "WS (recall)", "metric_1", "funkyrect",  "metric_1", list(width = 2),      
-    "OPSCA", "OPSCA", "OPSCA", "dataset", "funkyrect", "dataset", list(width = 2),
-    "Adamson", "Adamson", "Adamson", "dataset", "funkyrect", "dataset", list(width = 2),
-    "Nakatake", "Nakatake", "Nakatake", "dataset", "funkyrect", "dataset", list(width = 2),
-    "Norman", "Norman", "Norman", "dataset", "funkyrect", "dataset", list(width = 2),
-    "Replogle", "Replogle", "Replogle", "dataset", "funkyrect", "dataset", list(width = 2),
+    # FINAL_METRICS with surrogate names
+    "R (precision)", "R (precision)", "Regression (precision)", "metric_1", "funkyrect",  "metric_1", list(width = 1.5),
+    "R (recall)", "R (recall)", "Regression (recall)", "metric_1", "funkyrect",  "metric_1", list(width = 1.5),
+    "Virtual cell", "Virtual cell", "Virtual cell", "metric_1", "funkyrect",  "metric_1", list(width = 1.5),
+    "SEM", "SEM", "SEM", "metric_1", "funkyrect",  "metric_1", list(width = 1.5),
+    "WS (precision)", "WS (precision)", "WS distance (prec)", "metric_1", "funkyrect",  "metric_1", list(width = 1.5),
+    "WS (recall)", "WS (recall)", "WS distance (rec)", "metric_1", "funkyrect",  "metric_1", list(width = 1.5),
+    "TF recovery (precision)", "TF recovery (precision)", "TF recovery (precision)", "metric_1", "funkyrect",  "metric_1", list(width = 1.5),
+    "TF recovery (recall)", "TF recovery (recall)", "TF recovery (recall)", "metric_1", "funkyrect",  "metric_1", list(width = 1.5),
+    "Replica consistency", "Replica consistency", "Replica consistency", "metric_1", "funkyrect",  "metric_1", list(width = 1.5),
+    "TF binding", "TF binding", "TF binding", "metric_1", "funkyrect",  "metric_1", list(width = 1.5),
+    "Gene sets", "Gene sets", "Genesets recovery", "metric_1", "funkyrect",  "metric_1", list(width = 1.5),
+    # Datasets with surrogate names: OPSCA, ParseBioscience, 300BCG, IBD:UC, IBD:CD, Replogle, Xaira:HEK293T, Xaira:HCT116, Nakatake, Norman
+    "OPSCA", "OPSCA", "OPSCA", "dataset", "funkyrect", "dataset", list(width = 1.5),
+    "ParseBioscience", "ParseBioscience", "ParseBioscience", "dataset", "funkyrect", "dataset", list(width = 1.5),
+    "300BCG", "300BCG", "300BCG", "dataset", "funkyrect", "dataset", list(width = 1.5),
+    "IBD:UC", "IBD:UC", "IBD:UC", "dataset", "funkyrect", "dataset", list(width = 1.5),
+    "IBD:CD", "IBD:CD", "IBD:CD", "dataset", "funkyrect", "dataset", list(width = 1.5),
+    "Replogle", "Replogle", "Replogle", "dataset", "funkyrect", "dataset", list(width = 1.5),
+    "Xaira:HEK293T", "Xaira:HEK293T", "Xaira:HEK293T", "dataset", "funkyrect", "dataset", list(width = 1.5),
+    "Xaira:HCT116", "Xaira:HCT116", "Xaira:HCT116", "dataset", "funkyrect", "dataset", list(width = 1.5),
+    "Nakatake", "Nakatake", "Nakatake", "dataset", "funkyrect", "dataset", list(width = 1.5),
+    "Norman", "Norman", "Norman", "dataset", "funkyrect", "dataset", list(width = 1.5),
   ),
   tribble(
     ~id, ~name, ~geom,
@@ -83,10 +96,13 @@ method_type_mapping <- tribble(
   "Scenic+", "M",
   "FigR", "M",
   "GRaNIE", "M",
-  "Positive Ctrl", "",
-  "Negative Ctrl", "",
-  "Pearson Corr.", "S",
-  "scPRINT", "S"
+  "Positive Ctrl", "C",
+  "Negative Ctrl", "C",
+  "Pearson Corr.", "C",
+  "Spearman Corr.", "S",
+  "scPRINT", "S",
+  "GeneFormer", "F",
+  "scGPT", "F"
 )
 
 

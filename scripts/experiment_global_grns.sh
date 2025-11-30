@@ -12,5 +12,8 @@
 
 set -e
 
+# Default dataset if not provided
+DATASET=${1:-op}
+
 source env.sh
-python src/stability_analysis/global_grns/script.py
+python src/stability_analysis/global_grns/script.py --dataset $DATASET

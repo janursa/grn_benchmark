@@ -44,7 +44,14 @@ def get_par(dataset):
         'evaluation_data_de': f"{env['EVALUATION_DIR']}/{dataset}_de.h5ad",
         'ground_truth_unibind': f"{env['RESOURCES_DIR']}/grn_benchmark/ground_truth/{cell_type}_unibind.csv",
         'ground_truth_chipatlas': f"{env['RESOURCES_DIR']}/grn_benchmark/ground_truth/{cell_type}_chipatlas.csv",
-        'ground_truth_remap': f"{env['RESOURCES_DIR']}/grn_benchmark/ground_truth/{cell_type}_remap.csv"
-
+        'ground_truth_remap': f"{env['RESOURCES_DIR']}/grn_benchmark/ground_truth/{cell_type}_remap.csv",
+        'geneset_hallmark_2020': f"{env['RESOURCES_DIR']}/grn_benchmark/prior/pathways/hallmark_2020.gmt",
+        'geneset_kegg_2021': f"{env['RESOURCES_DIR']}/grn_benchmark/prior/pathways/kegg_2021.gmt",
+        'geneset_reactome_2022': f"{env['RESOURCES_DIR']}/grn_benchmark/prior/pathways/reactome_2022.gmt",
+        'geneset_go_bp_2023': f"{env['RESOURCES_DIR']}/grn_benchmark/prior/pathways/go_bp_2023.gmt",
+        'geneset_bioplanet_2019': f"{env['RESOURCES_DIR']}/grn_benchmark/prior/pathways/bioplanet_2019.gmt",
+        'geneset_wikipathways_2019': f"{env['RESOURCES_DIR']}/grn_benchmark/prior/pathways/wikipathways_2019.gmt",
+        'output_detailed_metrics': True,
+        'n_top_genes': 3000
     }
     return par

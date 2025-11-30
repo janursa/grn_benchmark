@@ -17,7 +17,7 @@ import io
 import itertools
 import os
 
-from task_grn_inference.src.utils.config import DATASETS, METHODS
+from task_grn_inference.src.utils.config import DATASETS, METHODS, surrogate_names
 
 
 
@@ -61,74 +61,7 @@ MARKERS = {
     'Pearson corr.': '-' 
 }
 
-surrogate_names = {
-    'scprint': 'scPRINT',
-    'collectri': 'CollectRI',
-    'scenicplus':'Scenic+', 
-    'celloracle':'CellOracle', 
-    'figr':'FigR',
-    'genie3': 'GENIE3',
-    'grnboost2':'GRNBoost2',
-    'grnboost':'GRNBoost2',
-    'ppcor':'PPCOR',
-    'portia':'Portia',
-    'baseline':'Baseline',
-    'cov_net': 'Pearson cov',
-    'granie':'GRaNIE',
-    'scglue':'scGLUE',
-    'pearson_corr': 'Pearson Corr.',
-    'scenic': 'Scenic',
-    'positive_control':'Positive Ctrl',
-    'negative_control':'Negative Ctrl',
-    'scgpt': 'scGPT',
-    'spearman_corr': 'Spearman Corr.',
-
-    'regression': 'Regression',
-    'ws_distance': 'Wasserstein (WS) Distance',
-    'sem': 'Structural Equation Modeling (SEM)',
-    'tf_recovery': 'TF Recovery',
-    'tf_binding': 'TF Binding',
-    'replica_consistency': 'Replica Consistency',
-    
-
-    'r2-theta-0.1': "R (precision)", 
-    'r2-theta-0.5': "R (balanced)", 
-    'r2-theta-1.0': "R (recall)", 
-
-    'r1_all': "R1 (all)",
-    'r1_grn': "R1 (grn)",
-    'ws-theta-0.0': "WS (precision)", 
-    'ws-theta-0.5': "WS (balanced)", 
-    'ws-theta-1.0': "WS (recall)", 
-    'sem': 'SEM',
-    # 'tfb_grn': 'TF binding (precision)',
-    # 'tfb_all': 'TF binding (recall)',
-    'replica_consistency_precision': 'RC (precision)',
-    'replica_consistency_balanced': 'RC (balanced)',
-    'sem_precision': 'SEM (precision)',
-    'sem_balanced': 'SEM (balanced)',
-    't_rec_precision': 'TF recovery (precision)',
-    't_rec_recall': 'TF recovery (recall)',
-    'rc_tf_act_precision': 'RC TF activity (precision)',
-    'rc_tf_act_balanced': 'RC TF activity (balanced)',
-    'rc_tf_act_recall': 'RC TF activity (recall)',
-    'tfb_grn_norm': 'TF binding (precision)',
-    'tfb_all_norm': 'TF binding (recall)',
-    'op':'OPSCA',
-    'nakatake': 'Nakatake', 
-    'norman': 'Norman', 
-    'adamson':'Adamson', 
-    'replogle': 'Replogle',
-    'Gtex:Whole blood': 'Gtex:Blood',
-    'Gtex:Brain amygdala': 'Gtex:Brain',
-    'Gtex:Breast mammary tissue': 'Gtex:Breast',
-    'xaira_HCT116': 'Xaira:HCT116',
-    'xaira_HEK293T': 'Xaira:HEK293T',
-    'parsebioscience': 'ParseBioscience',
-    'ibd_UC': 'IBD:UC',
-    'ibd_CD': 'IBD:CD',
-    '300BCG': '300BCG',
-
+surrogate_names = {**surrogate_names, **{
     'bulk': 'Bulk',
     'sc': 'Single cell',
     'de': 'Differential expression',
@@ -140,9 +73,12 @@ surrogate_names = {
     'ws_consensus': 'Consensus edges (WS distance)',
     'ws_distance_background': 'WS distance background scores',
     'evaluation_data_de': 'Differential expression data',
-    'ground_truth': 'Ground truth'
-
-    }
+    'ground_truth': 'Ground truth',
+    'Gtex:Whole blood': 'Gtex:Blood',
+    'Gtex:Brain amygdala': 'Gtex:Brain',
+    'Gtex:Breast mammary tissue': 'Gtex:Breast',
+    
+    }}
 
 NEGATIVE_CONTROL = 'Dimethyl Sulfoxide'
 CONTROLS3 = ['Dabrafenib', 'Belinostat', 'Dimethyl Sulfoxide']
@@ -677,7 +613,6 @@ def load_env(env_file="env.yaml"):
     env = load_config()
     return env
 
-
 def read_yaml_raw(file_path):
     import yaml
     with open(file_path, 'r') as file:
@@ -688,17 +623,20 @@ def read_yaml_raw(file_path):
         if dataset_id == 'None':
             continue
         method_id = entry['method_id']
-        metric_ids = entry['metric_ids']
+        try:
+            metric_ids = entry['metric_ids']
+        except:
+            continue
         metric_values = entry['metric_values']
+
         for metric_id, metric_value in zip(metric_ids, metric_values):
             record_store.append({
                 'dataset_id': dataset_id,
                 'method_id': method_id,
                 'metric_id': metric_id,
-                'metric_value': metric_value
+                'metric_value': float(metric_value)
             })
     df = pd.DataFrame(record_store)
-    
     return df
 def pivot_table(df):
     # print(df.groupby(['dataset_id', 'method_id']).size().sort_values(ascending=False))
@@ -707,13 +645,8 @@ def pivot_table(df):
     return df
 def read_yaml(file_path):
     df = read_yaml_raw(file_path).reset_index()
-
     df = df[(df['dataset_id']!= 'missing') ]
     df = df[df['metric_value'] != "None"]
-    # print(df.groupby(['dataset_id', 'method_id']).size().sort_values(ascending=False))
-    # print(df[df['method_id']=='geneformer'])
-    # print(df[df['method_id']=='grnboost'])
-    # df = df[df['method_id']!='scprint']
     df = pivot_table(df)
     return df
 
