@@ -1,6 +1,13 @@
 # env.sh
-export TASK_GRN_INFERENCE_DIR="/home/jnourisa/projs/ongoing/task_grn_inference"
-export GRN_BENCHMARK_DIR="/home/jnourisa/projs/ongoing/grn_benchmark"
+if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+    base_dir="/home/jnourisa/projs/ongoing"
+else
+    base_dir="/Users/jno24/Documents/projs/ongoing"
+fi
+export GRN_BENCHMARK_DIR="${base_dir}/grn_benchmark" #->file directiory
+export TASK_GRN_INFERENCE_DIR="${base_dir}/task_grn_inference" #-> it's ../../task_grn_inference
+
+
 export PYTHONPATH="$GRN_BENCHMARK_DIR:${PYTHONPATH:-}"
 
 export RESULTS_DIR="${TASK_GRN_INFERENCE_DIR}/resources/results"

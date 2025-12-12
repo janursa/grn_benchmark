@@ -606,7 +606,14 @@ def process_trace_local(job_ids_dict):
 
 def load_env(env_file="env.yaml"):
     import yaml
-    def load_config(config_path=env_file):
+    import os
+    
+    # Get the grn_benchmark root directory (parent of src/)
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    grn_benchmark_root = os.path.dirname(current_dir)
+    env_path = os.path.join(grn_benchmark_root, env_file)
+    
+    def load_config(config_path=env_path):
         with open(config_path, "r") as f:
             return yaml.safe_load(f)
 

@@ -13,12 +13,17 @@ import numpy as np
 import yaml
 from pathlib import Path
 
-# Add paths for imports
-sys.path.insert(0, '/home/jnourisa/projs/ongoing/grn_benchmark/src')
-sys.path.insert(0, '/home/jnourisa/projs/ongoing/task_grn_inference/src/utils/')
+# Add grn_benchmark to path and load environment
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from src.helper import load_env, surrogate_names, read_yaml
 
-from task_grn_inference.src.utils.config import DATASETS, METHODS, METRICS, FINAL_METRICS
-from grn_benchmark.src.helper import surrogate_names, read_yaml
+env = load_env()
+TASK_GRN_INFERENCE_DIR = env['TASK_GRN_INFERENCE_DIR']
+GRN_BENCHMARK_DIR = env['GRN_BENCHMARK_DIR']
+
+# Add task_grn_inference to path
+sys.path.insert(0, TASK_GRN_INFERENCE_DIR)
+from src.utils.config import DATASETS, METHODS, METRICS, FINAL_METRICS
 
 
 def process_scores_from_yaml(score_file):
@@ -178,8 +183,7 @@ def process_trace_to_csv(trace_file):
 def main():
     """Main function - follows the exact logic from process_results.ipynb."""
     
-    # Paths
-    TASK_GRN_INFERENCE_DIR = '/home/jnourisa/projs/ongoing/task_grn_inference'
+    # Get paths from environment
     results_folder = f'{TASK_GRN_INFERENCE_DIR}/resources/results'
     
     combined_dir = Path(results_folder) / 'all_new'
@@ -189,6 +193,9 @@ def main():
     print("=" * 80)
     print("Creating Overview Figure")
     print("=" * 80)
+    print(f"\nUsing base directory: {TASK_GRN_INFERENCE_DIR}")
+    print(f"Results folder: {results_folder}")
+    print(f"Combined directory: {combined_dir}")
     
     # Step 1: Process trace file (only op dataset)
     print("\n1. Processing trace data (op dataset only)...")
@@ -358,7 +365,7 @@ def main():
     
     # Step 5: Call R script
     print("\n5. Calling R script to create figure...")
-    r_script = '/home/jnourisa/projs/ongoing/grn_benchmark/src/summary_figure.R'
+    r_script = f'{GRN_BENCHMARK_DIR}/src/summary_figure.R'
     summary_figure = f"{results_folder}/summary_figure"
     
     import subprocess

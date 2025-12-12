@@ -8,15 +8,20 @@ import pandas as pd
 from pathlib import Path
 from collections import OrderedDict
 import sys
+# Add grn_benchmark to path and load environment
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from src.helper import load_env, surrogate_names, read_yaml
 
+env = load_env()
+TASK_GRN_INFERENCE_DIR = env['TASK_GRN_INFERENCE_DIR']
 # Add paths for imports
-sys.path.append('/home/jnourisa/projs/ongoing/task_grn_inference/src/utils/')
+sys.path.append(f'{TASK_GRN_INFERENCE_DIR}/src/utils/')
 from task_grn_inference.src.utils.config import DATASETS
 
 def combine_results():
     """Combine results from individual dataset folders into all_new folder."""
     
-    base_dir = Path('/home/jnourisa/projs/ongoing/task_grn_inference/resources/results')
+    base_dir =  Path(f'{TASK_GRN_INFERENCE_DIR}/resources/results')
     save_dir = base_dir / 'all_new'
     
     # Create output directory
