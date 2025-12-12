@@ -25,7 +25,7 @@ def main_metrics(par):
     return output
 
 dataset_masks = ['ctr', 'pert', 'both']
-GRN_INFERENCE = False
+GRN_INFERENCE = True
 EVALUATION = True
 
 rr_dir = f"{env['RESULTS_DIR']}/experiment/causality/"
@@ -65,7 +65,7 @@ for dataset in ['xaira_HEK293T', 'xaira_HCT116', 'replogle']:
             else:
                 adata_masked = adata.to_memory()
             print(f"Writing masked dataset: {d_mask}...", flush=True)
-            adata_masked.write_h5ad(f"{write_dir}/tmp/{dataset}_train_sc_{d_mask}.h5ad")
+            # adata_masked.write_h5ad(f"{write_dir}/tmp/{dataset}_train_sc_{d_mask}.h5ad")
 
             print('Running GRN inference...', flush=True)        
             print("Running Pearson correlation...", flush=True)

@@ -24,7 +24,8 @@ env = load_env()
 
 sys.path.append(env['GRN_BENCHMARK_DIR'])
 
-grns = ['scenicplus', 'grnboost', 'pearson_corr', 'celloracle', 'scenic']
+# grns = ['scenicplus', 'grnboost', 'pearson_corr', 'celloracle', 'scenic']
+grns = ['scenicplus', 'grnboost', 'pearson_corr']
 
 TASK_GRN_INFERENCE_DIR = env['TASK_GRN_INFERENCE_DIR']
 sys.path.append(TASK_GRN_INFERENCE_DIR)
@@ -41,31 +42,22 @@ for grn in grns:
     }
     prediction = read_prediction(par)
     prediction['weight'] = prediction['weight'].abs() 
+    # Normalize weights per GRN
     prediction['weight'] = (prediction['weight'] - prediction['weight'].mean()) / prediction['weight'].std()
-
+    
+    # Select top 20k edges
+    prediction = prediction.nlargest(20000, 'weight')
+    
     prediction['method'] = grn
     prediction_store.append(prediction)
+
+# Concatenate all predictions and drop duplicates
 prediction = pd.concat(prediction_store, axis=0)
-
-# Strategy 1: Require consensus from multiple methods (vote-based)
-# Only keep edges that appear in at least n methods
-consensus_counts = prediction.groupby(['source', 'target']).size().reset_index(name='n_methods')
-consensus = (
-    prediction.groupby(['source', 'target'])['weight']
-    .mean()
-    .reset_index()
-)
-consensus = consensus.merge(consensus_counts, on=['source', 'target'])
-
-# Filter: only keep edges supported by at least 2 methods
-min_consensus = 2
-consensus = consensus[consensus['n_methods'] >= min_consensus].copy()
-consensus['weight'] = consensus['weight'] * (consensus['n_methods'] / len(grns))  # Weight by agreement
-consensus = consensus[['source', 'target', 'weight']]
+consensus = prediction[['source', 'target', 'weight']].drop_duplicates(subset=['source', 'target'], keep='first')
 
 print(f"Consensus network shape: {consensus.shape}")
 print(f"Original combined edges: {len(prediction)}")
-print(f"Edges after requiring {min_consensus}+ methods: {len(consensus)}")
+print(f"Edges after dropping duplicates: {len(consensus)}")
 prediction_c = ad.read_h5ad(f"{env['RESULTS_DIR']}/{dataset}/{naming_convention(dataset, 'grnboost')}")
 prediction_c.uns['prediction'] = consensus
 prediction_c.uns['method_id'] = 'consensus'
