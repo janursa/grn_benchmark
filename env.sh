@@ -3,7 +3,10 @@ if [[ "$OSTYPE" == "linux-gnu"* ]]; then
     base_dir="/home/jnourisa/projs/ongoing"
 else
     base_dir="/Users/jno24/Documents/projs/ongoing"
+
 fi
+
+echo "Base directory set to: $base_dir"
 export GRN_BENCHMARK_DIR="${base_dir}/grn_benchmark" #->file directiory
 export TASK_GRN_INFERENCE_DIR="${base_dir}/task_grn_inference" #-> it's ../../task_grn_inference
 

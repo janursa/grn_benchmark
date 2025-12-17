@@ -270,7 +270,8 @@ def plot_metrics_as_axes(metrics, dataset, save_tag='_all'):
     # Create one figure per permutation type
     for permute_type in permute_types:
         # Create figure with one axis per metric
-        n_cols = min(6, n_metrics)
+        # n_cols = min(6, n_metrics)
+        n_cols = n_metrics
         n_rows = (n_metrics + n_cols - 1) // n_cols
         
         fig, axes = plt.subplots(n_rows, n_cols, figsize=(1.7*n_cols, 2.5*n_rows), sharey=False)
@@ -319,7 +320,7 @@ def plot_metrics_as_axes(metrics, dataset, save_tag='_all'):
             
             # Add legend to the last axis only
             if idx == n_metrics - 1:
-                ax.legend(loc=[1.05, .5], frameon=False, fontsize=8)
+                ax.legend(loc=[1.07, .2], frameon=False, fontsize=8)
         
         # Hide unused subplots
         for idx in range(n_metrics, len(axes)):
@@ -327,7 +328,7 @@ def plot_metrics_as_axes(metrics, dataset, save_tag='_all'):
         
         plt.suptitle(f"{permute_type}", y=1.02, weight='bold', fontsize=14)
         plt.tight_layout()
-        fig_name = f"{figs_dir}/permutation_{permute_type.replace(' ', '_').replace('-', '_')}_{save_tag}.png"
+        fig_name = f"{figs_dir}/permutation_{permute_type.replace(' ', '_').replace('-', '_')}_{save_tag}_{dataset}.png"
         print(f"Saving figure to: {fig_name}")
         fig.savefig(fig_name, 
                    dpi=200, transparent=True, bbox_inches='tight')

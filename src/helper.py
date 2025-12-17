@@ -94,6 +94,7 @@ if False:
 
 palette_datasets = {key: color for key, color in zip(DATASETS, sns.color_palette("deep", len(DATASETS)))}
 palette_methods = {key:color for key, color in zip(SELECTED_MODELS, sns.color_palette('Set2', len(SELECTED_MODELS)))}
+
 palette_celltype = ['#c4d9b3', '#c5bc8e', '#c49e81', '#c17d88', 'gray', 'lightsteelblue']
 
 # - line styles

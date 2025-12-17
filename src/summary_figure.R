@@ -100,7 +100,7 @@ method_type_mapping <- tribble(
   "Negative Ctrl", "C",
   "Pearson Corr.", "C",
   "Spearman Corr.", "S",
-  "scPRINT", "S",
+  "scPRINT", "F",
   "GeneFormer", "F",
   "scGPT", "F"
 )

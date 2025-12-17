@@ -34,6 +34,7 @@ def get_par(dataset):
     return par
 
 def feature_importance_func(par):
+    thetas = [0.25, 0.75]
     perturb_data = ad.read_h5ad(par['evaluation_data'])
     gene_names = perturb_data.var_names
     reg_type = par['reg_type'] 
@@ -63,56 +64,58 @@ def feature_importance_func(par):
                 data = json.load(f)
             gene_names_ = np.asarray(list(data.keys()), dtype=object)
             n_features_dict = {gene_name: i for i, gene_name in enumerate(gene_names_)}
-            n_features_theta_median = np.asarray([data[gene_name]['0.75'] for gene_name in gene_names], dtype=int)
-            tf_names = np.loadtxt(par['tf_all'], dtype=str)
-            if par['apply_tf']==False:
-                tf_names = gene_names
-            
-            # cross_validate now returns a DataFrame, not a dict
-            # We need to use cross_validate_gene_raw for individual gene results with models
-            from regression.helper import cross_validate_gene, fill_zeros_in_grn
-            
-            # Fill zeros in GRN
-            grn = fill_zeros_in_grn(net_matrix)
-            
-            # Remove interactions when first gene in pair is not in TF list
-            mask = np.isin(gene_names, list(tf_names))
-            grn[~mask, :] = 0
-            
-            # Process each gene individually to get models
-            for j in range(len(gene_names)):
-                gene = gene_names[j]
-                n_features = int(n_features_theta_median[j])
+            for theta in thetas:
+                n_features_theta_median = np.asarray([data[gene_name][str(theta)] for gene_name in gene_names], dtype=int)
+                tf_names = np.loadtxt(par['tf_all'], dtype=str)
+                if par['apply_tf']==False:
+                    tf_names = gene_names
                 
-                if n_features == 0:
-                    continue
+                # cross_validate now returns a DataFrame, not a dict
+                # We need to use cross_validate_gene_raw for individual gene results with models
+                from regression.helper import cross_validate_gene, fill_zeros_in_grn
+                
+                # Fill zeros in GRN
+                grn = fill_zeros_in_grn(net_matrix)
+                
+                # Remove interactions when first gene in pair is not in TF list
+                mask = np.isin(gene_names, list(tf_names))
+                grn[~mask, :] = 0
+                
+                # Process each gene individually to get models
+                for j in range(len(gene_names)):
+                    gene = gene_names[j]
+                    n_features = int(n_features_theta_median[j])
                     
-                present = gene in net.target.unique()
-                
-                # Get cross-validation results for this gene
-                result = cross_validate_gene(reg_type, X, groups, grn, j, n_features, n_jobs=1)
-                r2score = result['avg-r2']
-                reg_models = result['models']
-                
-                if reg_type == 'ridge':
-                    coeffs = [reg.coef_ for reg in reg_models]
-                else:
-                    coeffs = [reg.get_feature_importance() for reg in reg_models]
-                coeffs = np.asarray(coeffs)
-                n_regulator = coeffs.shape[1] if len(coeffs) > 0 else 0
-                
-                scores_store.append({
-                    'reg_type': reg_type,
-                    'donor_id': donor_id,
-                    'r2score': r2score,
-                    'present': present,
-                    'model': model,
-                    'gene': gene,
-                    'n_regulator': n_regulator,
-                    'n_present_regulators': net[net.target==gene]['source'].nunique(),
-                    'feature_importance_mean2std': np.mean(np.abs(np.mean(coeffs, axis=0)+1E-6)/(np.std(coeffs, axis=0)+1E-6)).round(3) if len(coeffs) > 0 else 0.0
-                })
-            i_iter+=1
+                    if n_features == 0:
+                        continue
+                        
+                    present = gene in net.target.unique()
+                    
+                    # Get cross-validation results for this gene
+                    result = cross_validate_gene(reg_type, X, groups, grn, j, n_features, n_jobs=1)
+                    r2score = result['avg-r2']
+                    reg_models = result['models']
+                    
+                    if reg_type == 'ridge':
+                        coeffs = [reg.coef_ for reg in reg_models]
+                    else:
+                        coeffs = [reg.get_feature_importance() for reg in reg_models]
+                    coeffs = np.asarray(coeffs)
+                    n_regulator = coeffs.shape[1] if len(coeffs) > 0 else 0
+                    
+                    scores_store.append({
+                        'theta': theta,
+                        'reg_type': reg_type,
+                        'donor_id': donor_id,
+                        'r2score': r2score,
+                        'present': present,
+                        'model': model,
+                        'gene': gene,
+                        'n_regulator': n_regulator,
+                        'n_present_regulators': net[net.target==gene]['source'].nunique(),
+                        'feature_importance_mean2std': np.mean(np.abs(np.mean(coeffs, axis=0)+1E-6)/(np.std(coeffs, axis=0)+1E-6)).round(3) if len(coeffs) > 0 else 0.0
+                    })
+                i_iter+=1
     scores_store = pd.DataFrame(scores_store)
     return scores_store
 

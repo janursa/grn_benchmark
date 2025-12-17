@@ -23,7 +23,7 @@ def get_reg2_par(dataset):
 def get_par(dataset):
     from config import DATASETS_CELLTYPES
     cell_type = DATASETS_CELLTYPES[dataset]
-
+    
     par = {
         'rna': f"{env['EVALUATION_DIR']}/{dataset}_rna.h5ad",
         'atac': f"{env['EVALUATION_DIR']}/{dataset}_atac.h5ad",

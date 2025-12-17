@@ -217,7 +217,6 @@ def wrapper_plot_fc(perturb_effect_df, title=None):
     import matplotlib.pyplot as plt
     import seaborn as sns
     fig, ax = plt.subplots(1, 1, figsize=(5.5, 2.5))
-    print(perturb_effect_df['Dataset'].unique())
     sns.stripplot(
         data=perturb_effect_df,
         x="Expression fold change", 
@@ -249,8 +248,8 @@ def wrapper_plot_fc(perturb_effect_df, title=None):
 def main_perturbation_effects():
     assert os.path.exists(f'{RESULTS_DIR}/perturb_effect_all.csv'), "File not found"
     perturb_effect_all = pd.read_csv(f'{RESULTS_DIR}/perturb_effect_all.csv')
-
-    perturb_effect_all['Dataset'] = perturb_effect_all['Dataset'].map(lambda name: surrogate_names.get(name,name))
+    perturb_effect_all = perturb_effect_all[perturb_effect_all['Dataset'].isin(DATASETS)]
+    perturb_effect_all['Dataset'] = perturb_effect_all['Dataset'].map(lambda name: surrogate_names[name])
     perturb_effect_all['Perturbation type'] = perturb_effect_all['Dataset'].map({
         'OPSCA': 'Chemical', 
         'Nakatake': 'Overexpression', 
@@ -271,7 +270,7 @@ def main_perturbation_effects():
     plt.savefig(file_name, dpi=300, transparent=True, bbox_inches='tight')
 
 
-    # - perturbation effect 
+    # - perturbation effect: std vs mean fc
     def wrapper_plot(perturb_effect_df):
         fig, ax = plt.subplots(1, 1, figsize=(2.5 , 2.5))
         def plot_perturbation_strength_datasets(perturb_effect_df, ax):
@@ -285,7 +284,8 @@ def main_perturbation_effects():
                 ax.spines[side].set_visible(False)
         plot_perturbation_strength_datasets(perturb_effect_df, ax)
         # fig.savefig(f"{RESULTS_DIR}/figs/perturbation_strength_datasets.png", dpi=300, transparent=True, bbox_inches='tight')
-    wrapper_plot(perturb_effect_all[perturb_effect_all['Dataset'].isin(['OPSCA', 'ParseBioscience'])])
+    if False:
+        wrapper_plot(perturb_effect_all[perturb_effect_all['Dataset'].isin(['OPSCA', 'ParseBioscience'])])
     # plt.close()
 def main_gene_wise():
     for i, dataset in enumerate(DATASETS):   

@@ -135,7 +135,7 @@ def plot_n_genes_with_regulators(n_genes_with_regulators_dict, ax):
     plt.legend(loc=(1.05, .5),frameon=False, title='Metric')
     plt.xticks(rotation=45, ha='right')
 
-def main_consensus_regression():
+def main_consensus_regression_repo():
     # - format it and store in one df
     df_store = []
     for dataset in DATASETS:
@@ -191,6 +191,57 @@ def main_consensus_regression():
     plot_n_genes_with_regulators(n_genes_with_regulators_dict, ax)
     file_name = f"{figs_dir}/consensus_all.png"
     print(f"consensus_all: {file_name}")
+    fig.savefig(file_name, dpi=300, transparent=True, bbox_inches='tight')
+    plt.close()
+def main_consensus_regression():
+    # - format it and store in one df
+    df_store = []
+    for dataset in DATASETS:
+        data, gene_names = load_data(dataset, TASK_GRN_INFERENCE_DIR)
+        n_features = process_features(data, gene_names, thetas)
+        df = pd.DataFrame(n_features).melt(var_name='theta')
+        df['dataset'] = dataset
+        df_store.append(df)
+    regulatorys_consensus = pd.concat(df_store)
+    regulatorys_consensus['dataset'] = regulatorys_consensus['dataset'].map(surrogate_names)
+    regulatorys_consensus['theta'] = regulatorys_consensus['theta'].map({'0.25':"R2 (precision)", '0.75':"R2 (recall)"})
+    
+    # Plot all datasets in one figure
+    fig, ax = plt.subplots(1, 1, figsize=(5, 2))
+    sns.stripplot(
+        data=regulatorys_consensus, 
+        x='theta', 
+        y='value', 
+        hue='dataset', 
+        ax=ax, 
+        alpha=.5, 
+        edgecolor='black', 
+        dodge=True, 
+        jitter=0.1,  
+        palette={surrogate_names[name]: color for name, color in palette_datasets.items()}
+    )
+    plt.yscale('log')  
+    plt.xlabel('Metric')  
+    plt.ylabel('Number of regulators') 
+    plt.margins(y=.15) 
+    ax.legend(loc=(1.1, -.1), frameon=False, title='Dataset')
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right')
+    file_name = f"{figs_dir}/regression_consensus_all.png"
+    print(f"regression_consensus_all: {file_name}")
+    fig.savefig(file_name, dpi=300, transparent=True, bbox_inches='tight')
+    plt.close()
+    
+    # Number of genes with actual regulators 
+    n_genes_with_regulators_dict = extract_nregulators_func(
+        datasets=DATASETS,
+        TASK_GRN_INFERENCE_DIR=TASK_GRN_INFERENCE_DIR
+    )
+    fig, ax = plt.subplots(1,1, figsize=(4, 2), sharey=True)
+    plot_n_genes_with_regulators(n_genes_with_regulators_dict, ax)
+    file_name = f"{figs_dir}/regression_genes_with_regulators.png"
+    print(f"regression_genes_with_regulators: {file_name}")
     fig.savefig(file_name, dpi=300, transparent=True, bbox_inches='tight')
     plt.close()
 
