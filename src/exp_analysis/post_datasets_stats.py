@@ -34,87 +34,8 @@ from src.helper import plot_heatmap, surrogate_names, custom_jointplot, palette_
 
 TASK_GRN_INFERENCE_DIR = env['TASK_GRN_INFERENCE_DIR']
 sys.path.append(TASK_GRN_INFERENCE_DIR)
-from src.utils.config import DATASETS_METRICS, DATASETS_CELLTYPES, DATASETS
-
-DATASET_INFO = {
-        "op": {
-            "cell_type": "PBMC",
-            "perturbation_type": "Drugs",
-            "Inference data": " sc",
-            'Measurement time': "24 hours",
-            "Modality": 'Multiomics'
-        },
-        "ibd_uc": {
-            "cell_type": "PBMC",
-            "perturbation_type": "Chemicals/ bacteria",
-            "Inference data": "sc",
-            'Measurement time': "24 hours",
-            "Modality": 'Multiomics'
-        },
-        "ibd_cd": {
-            "cell_type": "PBMC",
-            "perturbation_type": "Chemicals/ bacteria",
-            "Inference data": "sc",
-            'Measurement time': "24 hours",
-            "Modality": 'Multiomics'
-        },
-        "300BCG": {
-            "cell_type": "PBMC",
-            "perturbation_type": "Chemicals",
-            "Inference data": "sc",
-            'Measurement time': 'T0 and 3 months',
-            "Modality": 'Transcriptmoics'
-        },
-        "parsebioscience": {
-            "cell_type": "PBMC",
-            "perturbation_type": "Cytokines",
-            "Inference data": " sc/bulk",
-            'Measurement time': "24 hours",
-            "Modality": 'Transcriptmoics'
-        },
-        "xaira_HEK293T": {
-            "cell_type": "HEK293T",
-            "perturbation_type": "Knockout",
-            "Inference data": " sc/bulk",
-            'Measurement time': "7 days",
-            "Modality": 'Transcriptmoics'
-        },
-        "xaira_HCT116": {
-            "cell_type": "HCT116",
-            "perturbation_type": "Knockout",
-            "Inference data": " sc/bulk",
-            'Measurement time': "7 days",
-            "Modality": 'Transcriptmoics'
-        },
-        "replogle": {
-            "cell_type": "K562",
-            "perturbation_type": "Knockout",
-            "Inference data": " sc/bulk",
-            'Measurement time': "7 days",
-            "Modality": 'Transcriptmoics'
-        },
-        "nakatake": {
-            "cell_type": "SEES3 (PSC)",
-            "perturbation_type": "Overexpression",
-            "Inference data": "bulk",
-            'Measurement time': "2 days",
-            "Modality": 'Transcriptmoics'
-        },
-        "norman": {
-            "cell_type": "K562",
-            "perturbation_type": "Activation",
-            "Inference data": "sc",
-            'Measurement time': "7 days",
-            "Modality": 'Transcriptmoics'
-        },
-        "adamson": {
-            "cell_type": "K562",
-            "perturbation_type": "Knockout",
-            "Inference data": "sc",
-            'Measurement time': "7 days",
-            "Modality": 'Transcriptmoics'
-        },
-    }
+from src.utils.config import DATASETS_METRICS, DATASETS_CELLTYPES, DATASETS, DATASET_INFO
+DOCS_IMAGES_DIR = env['DOCS_IMAGES_DIR']
 
 def plot_table(summary, figsize=(6,6)):
     fig, ax = plt.subplots(figsize=figsize)
@@ -201,6 +122,10 @@ def main_datasets_stats():
       
     plot_table(stats_df, figsize=(1.3*stats_df.shape[1], 1.1*stats_df.shape[0]))
     file_name = f'{figs_dir}/table_datasets_summary.pdf'
+    print('dataset summary table: ', file_name)
+    plt.savefig(file_name, bbox_inches='tight')
+
+    file_name = f'{DOCS_IMAGES_DIR}/table_datasets_summary.pdf'
     print('dataset summary table: ', file_name)
     plt.savefig(file_name, bbox_inches='tight')
     plt.close()

@@ -3,7 +3,7 @@
 #SBATCH --output=logs/%j.out
 #SBATCH --error=logs/%j.err
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=2
+#SBATCH --cpus-per-task=20
 #SBATCH --time=20:00:00
 #SBATCH --mem=250GB
 #SBATCH --partition=cpu

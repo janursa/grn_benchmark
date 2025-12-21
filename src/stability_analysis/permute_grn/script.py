@@ -15,7 +15,6 @@ from src.params import get_par
 
 sys.path.insert(0, env['GRN_BENCHMARK_DIR'])
 from src.stability_analysis.permute_grn.helper import main as main_permute
-
 parser = argparse.ArgumentParser()
 parser.add_argument('--dataset', type=str)
 
@@ -29,8 +28,8 @@ par = {
   'grns_dir': f"{env['RESULTS_DIR']}/{args.dataset}/",
   'write_dir': f"{env['RESULTS_DIR']}/experiment/permute_grn/",
   'degrees': [0, 10, 20, 50, 100], #[0, 10, 20, 50, 100],
-  'analysis_types': ["net", "direction", "sign", "weight"], #['direction', 'weight', "net", "sign"]
-  'methods': [ 'ppcor', 'grnboost', 'pearson_corr', 'portia', 'scenicplus', 'scprint'],
+  'analysis_types': ["net"], #['direction', 'weight', "net", "sign"]
+  'methods': ['negative_control', 'positive_control', 'ppcor', 'grnboost', 'pearson_corr', 'portia', 'scenicplus', 'scprint'],
   # 'methods': ['grnboost',  'pearson_corr', 'scenicplus'],
   'dataset': args.dataset
 }

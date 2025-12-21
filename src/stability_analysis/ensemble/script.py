@@ -34,11 +34,13 @@ parser = argparse.ArgumentParser(description='Run gene-wise ensemble GRN analysi
 parser.add_argument('--rr_folder', type=str, required=True, help='Results folder path')
 parser.add_argument('--dataset', type=str, required=True, help='Dataset name')
 parser.add_argument('--theta', type=float, default=0.25, help='Quantile for feature selection (default: 0.25)')
+parser.add_argument('--skip_metrics', action='store_true', help='Skip metrics evaluation')
 args = parser.parse_args()
 
 rr_folder = args.rr_folder
 dataset = args.dataset
 theta = args.theta
+skip_metrics = args.skip_metrics
 
 # Create output directory
 os.makedirs(rr_folder, exist_ok=True)
@@ -136,7 +138,7 @@ def evaluate_genes_parallel(grn, model_name="model"):
     
     return gene_scores, genes_evaluated, genes_skipped
 
-if True:
+if skip_metrics==False:
     if 'donor_id' not in perturb_data.obs:
         perturb_data.obs['donor_id'] = 'donor_0'
     if 'cell_type' not in perturb_data.obs:
@@ -292,7 +294,7 @@ if True:
     
     print(f"\nEnsemble network saved to: {output_file}")
     
-if True:
+if not skip_metrics:
     # Run metrics evaluation
     print("\n" + "="*80)
     print("STEP 5: Evaluating ensemble network (gene-wise)")
@@ -389,7 +391,7 @@ if True:
     model_counts = valid_genes_df['best_model'].value_counts()
     
     # PLOT 1: Number of genes selected per method (vertical bar plot)
-    fig, ax = plt.subplots(1, 1, figsize=(2, 2.5))
+    fig, ax = plt.subplots(1, 1, figsize=(2, 2))
     
     model_counts_sorted = model_counts.sort_values(ascending=True)  # Ascending for horizontal bars
 

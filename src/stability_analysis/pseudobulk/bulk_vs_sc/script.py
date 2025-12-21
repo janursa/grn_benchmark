@@ -11,6 +11,10 @@ assert 'TASK_GRN_INFERENCE_DIR' in env, "Please set the TASK_GRN_INFERENCE_DIR e
 TASK_GRN_INFERENCE_DIR = env['TASK_GRN_INFERENCE_DIR']
 RESULT_DIR = env['RESULTS_DIR']
 
+# Add grn_benchmark src to path to use get_par
+GRN_BENCHMARK_DIR = env.get('GRN_BENCHMARK_DIR', os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
+sys.path.append(f'{GRN_BENCHMARK_DIR}/src')
+
 meta = {
     "metrics_dir": f'{TASK_GRN_INFERENCE_DIR}/src/metrics',
     "util_dir": f'{TASK_GRN_INFERENCE_DIR}/src/utils'
@@ -20,32 +24,9 @@ sys.path.append(meta["util_dir"])
 
 # from src.methods.pearson_corr.script import main as main_inference
 from all_metrics.helper import main as main_metrics
+from params import get_par
 # from ws_distance.consensus.helper import main as main_consensus_ws_distance
 # from regression.consensus.helper import main as main_consensus_reg2
-
-def def_par(dataset):
-    par = {
-        'evaluation_data': f'{TASK_GRN_INFERENCE_DIR}/resources/grn_benchmark/evaluation_data/{dataset}_bulk.h5ad',
-        'tf_all': f'{TASK_GRN_INFERENCE_DIR}/resources/grn_benchmark/prior/tf_all.csv',
-        'apply_skeleton': False,
-        'apply_tf': True,
-        'max_n_links': 50000,
-        'layer': 'lognorm',
-        'apply_tf_methods': True,
-        'reg_type': 'ridge',
-        'num_workers': 10,
-        'ws_distance_background': f'{TASK_GRN_INFERENCE_DIR}/resources/grn_benchmark/prior/ws_distance_background_{dataset}.csv',
-        'evaluation_data_sc': f'{TASK_GRN_INFERENCE_DIR}/resources/extended_data/{dataset}_train_sc.h5ad',
-        'evaluation_data_de': f'{TASK_GRN_INFERENCE_DIR}/resources/grn_benchmark/evaluation_data/{dataset}_de.h5ad',
-        'regulators_consensus': f'{TASK_GRN_INFERENCE_DIR}/resources/grn_benchmark/prior/regulators_consensus_{dataset}.json',
-        'ws_consensus': f'{TASK_GRN_INFERENCE_DIR}/resources/grn_benchmark/prior/ws_consensus_{dataset}.csv',
-        'ws_background': f'{TASK_GRN_INFERENCE_DIR}/resources/grn_benchmark/prior/ws_distance_background_{dataset}.csv',
-    }
-    for key, val in par.items():
-        if type(val) is str and 'resources' in val:
-            if not os.path.exists(val):
-                print(f"Warning: {key} path {val} does not exist.")
-    return par
 def prediction_file_name(dataset, data_type):
     return f'{results_dir}/{dataset}.prediction_{data_type}.h5ad'
 
@@ -78,12 +59,12 @@ if __name__ == '__main__':
     results_dir = f'{RESULT_DIR}/experiment/bulk_vs_sc/'
     os.makedirs(results_dir, exist_ok=True)
     datasets = ['xaira_HEK293T', 'xaira_HCT116', 'replogle'] #'replogle', 'xaira_HEK293T', 'xaira_HCT116' , 'parsebioscience' #RUN per dataset seperately
-    RUN_GRN_INFERNCE = True
+    RUN_GRN_INFERNCE = False
     RUN_METRICS = True
 
     metrics_all = []
     for dataset in datasets:
-        par = def_par(dataset)
+        par = get_par(dataset)
         print('Processing dataset:', dataset, flush=True)
         if RUN_GRN_INFERNCE:
             # - infer GRNs

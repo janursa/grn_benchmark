@@ -212,9 +212,13 @@ def main():
     # Step 3: Process scores - EXACT LOGIC FROM NOTEBOOK
     print("\n3. Creating summary dataframe...")
     
-    # Get metrics - use FINAL_METRICS only
-    metrics = [m for m in scores_all.columns.tolist() if m in FINAL_METRICS]
-    print(f"   Using FINAL_METRICS: {metrics}")
+    # Get all metrics from METRICS
+    metrics = [m for m in scores_all.columns.tolist() if m in METRICS]
+    print(f"   Using all METRICS for display: {len(metrics)} metrics")
+    
+    # Get only FINAL_METRICS for ranking
+    final_metrics = [m for m in METRICS if m in FINAL_METRICS]
+    print(f"   Using FINAL_METRICS for ranking: {len(final_metrics)} metrics")
     
     # Normalize the scores per dataset
     def normalize_scores_per_dataset(df):
@@ -263,9 +267,10 @@ def main():
         # Restore NaN
         df_metrics.loc[original_nans, col] = float('nan')
     
-    # Keep only FINAL_METRICS in df_metrics
-    final_metric_cols = [col for col in df_metrics.columns if col in FINAL_METRICS]
-    df_metrics = df_metrics[final_metric_cols]
+    # Keep all metrics but reorder: FINAL_METRICS first, then others
+    metrics_in_final = [m for m in FINAL_METRICS if m in df_metrics.columns]
+    metrics_not_in_final = [m for m in df_metrics.columns if m not in FINAL_METRICS]
+    df_metrics = df_metrics[metrics_in_final + metrics_not_in_final]
     
     # Average scores for all datasets (per dataset)
     def mean_for_datasets(df):
@@ -299,11 +304,16 @@ def main():
         print(f"   Warning: Found duplicate methods in scores, taking mean")
         df_scores = df_scores.groupby(df_scores.index).mean()
     
-    # Calculate overall score - only average over non-NaN values
-    # This ensures methods are only evaluated on datasets where they were actually run
-    df_scores['overall_score'] = df_scores.mean(axis=1, skipna=True)
+    # Calculate overall score using ONLY FINAL_METRICS
+    # This ensures ranking is based only on the final metrics
+    final_metrics_cols = [col for col in final_metrics if col in df_scores.columns]
+    dataset_cols = [col for col in df_scores.columns if col in DATASETS]
     
-    print(f"   Overall scores calculated (averaging only over available datasets per method)")
+    # Average only FINAL_METRICS and dataset scores for overall ranking
+    ranking_cols = final_metrics_cols + dataset_cols
+    df_scores['overall_score'] = df_scores[ranking_cols].mean(axis=1, skipna=True)
+    
+    print(f"   Overall scores calculated using only FINAL_METRICS ({len(final_metrics_cols)} metrics) + datasets ({len(dataset_cols)} datasets)")
     
     # Merge scores with resources
     df_summary = pd.concat([df_scores, df_res], axis=1)

@@ -9,7 +9,8 @@ fi
 echo "Base directory set to: $base_dir"
 export GRN_BENCHMARK_DIR="${base_dir}/grn_benchmark" #->file directiory
 export TASK_GRN_INFERENCE_DIR="${base_dir}/task_grn_inference" #-> it's ../../task_grn_inference
-
+export DOCS_SOURCE_DIR="${TASK_GRN_INFERENCE_DIR}/docs/source"
+export DOCS_IMAGES_DIR="${DOCS_SOURCE_DIR}/images"
 
 export PYTHONPATH="$GRN_BENCHMARK_DIR:${PYTHONPATH:-}"
 
@@ -44,7 +45,7 @@ output="env.yaml"
 echo "# Auto-generated from env.sh" > "$output"
 
 # Iterate over exported variables in this script
-for var in TASK_GRN_INFERENCE_DIR GRN_BENCHMARK_DIR PYTHONPATH RESULTS_DIR IMAGES_DIR RESOURCES_DIR INFERENCE_DIR EVALUATION_DIR PRIOR_DIR EXTENDED_DIR METHODS_DIR METRICS_DIR UTILS_DIR; do
+for var in TASK_GRN_INFERENCE_DIR GRN_BENCHMARK_DIR PYTHONPATH RESULTS_DIR IMAGES_DIR RESOURCES_DIR INFERENCE_DIR EVALUATION_DIR PRIOR_DIR EXTENDED_DIR METHODS_DIR METRICS_DIR UTILS_DIR DOCS_IMAGES_DIR; do
     value="$(eval echo "\"\$$var\"")"
     echo "$var: \"$value\"" >> "$output"
 done

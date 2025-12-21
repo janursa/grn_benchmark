@@ -38,13 +38,14 @@ def format_permute_grn_results(noise_type='net', metrics=None, dataset=None):
     for degree in degrees:
         rr_file = f"{RESULTS_DIR}/experiment/permute_grn/{dataset}-{noise_type}-{degree}-scores.csv"
         if not os.path.exists(rr_file):
-            print(f"File not found: {rr_file}")
+            # print(f"File not found: {rr_file}")
             continue
         # Load data
         df = pd.read_csv(
             rr_file,
             index_col=0
         )
+
         for metric in metrics:
             if metric not in df.columns:
                 # print(f"Metric '{metric}' not found in {dataset}-{noise_type}-{degree}-scores.csv")
@@ -62,6 +63,7 @@ def format_permute_grn_results(noise_type='net', metrics=None, dataset=None):
             index="degree", columns="model", values=metric
         )
         metric_matrices[metric] = df_metric_all
+    # print(metric_matrices)
     return metric_matrices
     
 
@@ -85,10 +87,6 @@ def merge_df(reg_mat_net=None, reg_mat_sign=None, reg_mat_weight=None, reg_mat_d
         return None  # no data available
 
     df_concat = pd.concat(dfs)
-
-    # Optional cleanup
-    if 'negative_control' in df_concat.columns:
-        df_concat = df_concat.drop(columns=['negative_control'])
 
     # Rename columns with surrogate names
     df_concat.columns = df_concat.columns.map(lambda name: surrogate_names.get(name, name))
@@ -171,7 +169,9 @@ def main(metrics, dataset):
         ylabel = "Performance"
         fig, axes = plt.subplots(1, 4, figsize=(12, 2.5), sharey=False)
         df_metric = merged_dfs[metric]
-        df_metric_short = df_metric[df_metric['model'].isin(['GRNBoost2', 'Scenic+', 'Pearson Corr.', 'Portia', 'PPCOR'])]
+        # df_metric_short = df_metric[df_metric['model'].isin(['GRNBoost2', 'Scenic+', 'Pearson Corr.', 'Portia', 'PPCOR'])]
+        df_metric_short = df_metric.copy()
+        
         ax = axes[0]
         plot_line(df_metric_short, ax, col='TF-gene link', ylabel=ylabel)
         ax.set_xlabel('Permutation intensity (%)')
@@ -199,11 +199,17 @@ def main(metrics, dataset):
     # fig.savefig(f"{results_folder}/figs/robustnes_analysis.png", dpi=300, transparent=True, bbox_inches='tight')
 
 
-def plot_metrics_as_axes(metrics, dataset, save_tag='_all'):
+def plot_metrics_as_axes(metrics, dataset, save_tag='_all', use_raw_scores=False):
     """
     Plot permutation analysis with one figure per permutation type, and one axis per metric.
     Instead of the main function which creates one figure per metric with 4 axes (one per permutation type),
     this creates 4 figures (one per permutation type) with multiple axes (one per metric).
+    
+    Args:
+        metrics: list of metrics to plot
+        dataset: dataset name
+        save_tag: tag to append to saved figure names
+        use_raw_scores: if True, plot raw scores instead of normalized 0-100 scale
     """
     # Load all permutation results
     noise_type = 'net'
@@ -242,8 +248,12 @@ def plot_metrics_as_axes(metrics, dataset, save_tag='_all'):
         print("No metrics available to plot")
         return
     
-    ylabel = "Performance (%)"
-    permute_types = ['TF-gene link', 'TF-gene sign', 'TF-gene direction', 'TF-gene weight']
+    if use_raw_scores:
+        ylabel = "Raw score"
+    else:
+        ylabel = "Performance (%)"
+    # permute_types = ['TF-gene link', 'TF-gene sign', 'TF-gene direction', 'TF-gene weight']
+    permute_types = ['TF-gene link']
     
     # Helper function to normalize data with min-max scaling to 0-100
     def normalize_minmax(df_all, col):
@@ -269,12 +279,14 @@ def plot_metrics_as_axes(metrics, dataset, save_tag='_all'):
     
     # Create one figure per permutation type
     for permute_type in permute_types:
-        # Create figure with one axis per metric
-        # n_cols = min(6, n_metrics)
         n_cols = n_metrics
         n_rows = (n_metrics + n_cols - 1) // n_cols
         
-        fig, axes = plt.subplots(n_rows, n_cols, figsize=(1.7*n_cols, 2.5*n_rows), sharey=False)
+        # Make figure bigger for raw scores
+        if use_raw_scores:
+            fig, axes = plt.subplots(n_rows, n_cols, figsize=(2.5*n_cols, 2.5*n_rows), sharey=False)
+        else:
+            fig, axes = plt.subplots(n_rows, n_cols, figsize=(1.7*n_cols, 2.4*n_rows), sharey=False)
         if n_metrics == 1:
             axes = [axes]
         else:
@@ -286,17 +298,28 @@ def plot_metrics_as_axes(metrics, dataset, save_tag='_all'):
                 
             ax = axes[idx]
             df_metric = merged_dfs[metric]
-            df_metric_short = df_metric[df_metric['model'].isin(['GRNBoost2', 'Scenic+', 'Pearson Corr.', 'Portia', 'PPCOR'])]
             
-            # Normalize the data for this permutation type
-            df_pivot_norm = normalize_minmax(df_metric_short, permute_type)
             
-            if df_pivot_norm.empty:
+            
+            # Normalize the data for this permutation type (or use raw scores)
+            if use_raw_scores:
+                # Use raw scores instead of normalization
+                df = df_metric[df_metric['Permute type'] == permute_type].drop(columns='Permute type').copy()
+                if df.empty:
+                    continue
+                df_pivot = df.pivot(index='model', columns='Degree', values='r2score')
+            else:
+                df_metric_short = df_metric[df_metric['model'].isin(['GRNBoost2', 'Scenic+', 'Pearson Corr.', 'Portia', 'PPCOR'])]
+                # df_metric_short = df_metric.copy()
+                df_pivot = normalize_minmax(df_metric_short, permute_type)
+
+            
+            if df_pivot.empty:
                 continue
             
-            # Plot normalized data
-            for model in df_pivot_norm.index:
-                ax.plot(df_pivot_norm.columns, df_pivot_norm.loc[model], 
+            # Plot data (normalized or raw)
+            for model in df_pivot.index:
+                ax.plot(df_pivot.columns, df_pivot.loc[model], 
                        label=model, marker='o', color=palette_methods.get(model, 'gray'))
             
             ax.set_ylabel(ylabel if idx == 0 else '')
@@ -309,7 +332,8 @@ def plot_metrics_as_axes(metrics, dataset, save_tag='_all'):
                 ax.set_xlabel('Permutation intensity (%)')
             else:
                 ax.set_xlabel('')
-                ax.set_yticks([])
+                if not use_raw_scores:
+                    ax.set_yticks([])
             
             # Wrap long titles: if > 10 characters, replace " (" with " \n("
             title = surrogate_names.get(metric, metric)
@@ -326,9 +350,14 @@ def plot_metrics_as_axes(metrics, dataset, save_tag='_all'):
         for idx in range(n_metrics, len(axes)):
             axes[idx].set_visible(False)
         
-        plt.suptitle(f"{permute_type}", y=1.02, weight='bold', fontsize=14)
+        # plt.suptitle(f"{permute_type}", y=1.02, weight='bold', fontsize=14)
         plt.tight_layout()
-        fig_name = f"{figs_dir}/permutation_{permute_type.replace(' ', '_').replace('-', '_')}_{save_tag}_{dataset}.png"
+        
+        # Add _raw tag to filename if using raw scores
+        if use_raw_scores:
+            fig_name = f"{figs_dir}/permutation_{permute_type.replace(' ', '_').replace('-', '_')}_{save_tag}_{dataset}_raw.png"
+        else:
+            fig_name = f"{figs_dir}/permutation_{permute_type.replace(' ', '_').replace('-', '_')}_{save_tag}_{dataset}.png"
         print(f"Saving figure to: {fig_name}")
         fig.savefig(fig_name, 
                    dpi=200, transparent=True, bbox_inches='tight')

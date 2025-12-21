@@ -39,19 +39,24 @@ if __name__ == '__main__':
     global_grn_dir = f'{TASK_GRN_INFERENCE_DIR}/resources/grn_models/global/'
     
     global_grns = os.listdir(global_grn_dir) #all the files in the global_grn_dir
-    inferred_methods = ['negative_control', 'pearson_corr', 'grnboost', 'scenicplus']
-    all_models = inferred_methods + global_grns
+    inferred_methods = ['negative_control', 'pearson_corr', 'grnboost', 'scenicplus', 'scenic']
+    
 
     for name in global_grns:
-        net = pd.read_csv(f'{global_grn_dir}/{name}', index_col=0)
+        file_path = f'{global_grn_dir}/{name}'
+        net = pd.read_csv(file_path, index_col=0)
+        
         net = ad.AnnData(X=None, uns={"method_id": name, "dataset_id": dataset, "prediction": net[["source", "target", "weight"]]})
         net.write(f'{results_dir}/{naming_convention(dataset, name)}')
-
+    available_methods = []
     for name in inferred_methods:
         net_file = f"{TASK_GRN_INFERENCE_DIR}/resources/results/{dataset}/{naming_convention_main(dataset, name)}"
+        if not os.path.exists(net_file):
+            continue
         net = ad.read_h5ad(net_file)
         net.write(f'{results_dir}/{naming_convention(dataset, name)}')
-
+        available_methods.append(name)
+    all_models = available_methods + global_grns
     # - consensus 
     par = get_par(dataset)
     par['dataset'] = dataset

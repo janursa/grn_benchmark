@@ -13,11 +13,11 @@
 set -euo pipefail
 
 dataset=$1
-imputation_methods=("magic") #"original" "knn" "magic"
-inference_methods=('grnboost') #'grnboost' 'pearson_corr'
+imputation_methods=("original" "knn" "magic") #"original" "knn" "magic"
+inference_methods=('pearson_corr') #'grnboost' 'pearson_corr'
 run_imputation=false
-run_grn_inference=true
-run_metrics=false
+run_grn_inference=false
+run_metrics=true
 
 source env.sh
 output_dir="${RESULTS_DIR}/experiment/imputation"
