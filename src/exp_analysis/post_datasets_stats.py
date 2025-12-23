@@ -45,6 +45,7 @@ def plot_table(summary, figsize=(6,6)):
         colLabels=summary.columns,
         cellLoc="center",
         loc="center",
+        bbox=[0, 0, 1, 1]
     )
     tbl.auto_set_font_size(False)
     tbl.set_fontsize(12)
@@ -66,38 +67,46 @@ def plot_table(summary, figsize=(6,6)):
         tbl[(r, n_cols - 1)].set_linewidth(1.2)
     for c in range(n_cols):
         tbl[(n_rows - 1, c)].set_linewidth(1.2)
-    plt.tight_layout()
+    plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
   
-def main_datasets_stats():
-    stats_store = []
-    cell_counts = []
-    for dataset in DATASETS: 
-        print(dataset)
-        adata = ad.read_h5ad(f"{TASK_GRN_INFERENCE_DIR}/resources/extended_data/{dataset}_bulk.h5ad", backed="r")
-        try:
-            cell_count = adata.obs['cell_count'].sum()
-            
-        except:
-            cell_count = len(adata)
-        if dataset in ['nakatake']:
-            cell_count = '-'
-        total_perturbations = adata.obs["perturbation"].nunique()
-        if dataset not in DATASET_INFO:
-            raise ValueError(f"Unknown dataset: {dataset}")
-        info = DATASET_INFO[dataset]
-        n_genes = adata.shape[1]
-        adata = ad.read_h5ad(f"{TASK_GRN_INFERENCE_DIR}/resources/grn_benchmark/inference_data/{dataset}_rna.h5ad", backed="r")
-        num_samples_inference = adata.n_obs
-        if "perturbation" not in adata.obs:
-            adata.obs["perturbation"] = "control"
-        num_unique_perturbations_inference = adata.obs["perturbation"].nunique()
+def main_datasets_stats(force=False):
+    stats_cache_file = f'{RESULTS_DIR}/datasets_stats_cache.csv'
+    
+    # Check if cached stats exist and force is not set
+    if not force and os.path.exists(stats_cache_file):
+        print(f"Loading cached stats from {stats_cache_file}")
+        stats_df = pd.read_csv(stats_cache_file)
+    else:
+        print("Calculating dataset stats...")
+        stats_store = []
+        cell_counts = []
+        for dataset in DATASETS: 
+            print(dataset)
+            adata = ad.read_h5ad(f"{TASK_GRN_INFERENCE_DIR}/resources/extended_data/{dataset}_bulk.h5ad", backed="r")
+            try:
+                cell_count = adata.obs['cell_count'].sum()
+                
+            except:
+                cell_count = len(adata)
+            if dataset in ['nakatake']:
+                cell_count = '-'
+            total_perturbations = adata.obs["perturbation"].nunique()
+            if dataset not in DATASET_INFO:
+                raise ValueError(f"Unknown dataset: {dataset}")
+            info = DATASET_INFO[dataset]
+            n_genes = adata.shape[1]
+            adata = ad.read_h5ad(f"{TASK_GRN_INFERENCE_DIR}/resources/grn_benchmark/inference_data/{dataset}_rna.h5ad", backed="r")
+            num_samples_inference = adata.n_obs
+            if "perturbation" not in adata.obs:
+                adata.obs["perturbation"] = "control"
+            num_unique_perturbations_inference = adata.obs["perturbation"].nunique()
 
-        adata = ad.read_h5ad(f"{TASK_GRN_INFERENCE_DIR}/resources/grn_benchmark/evaluation_data/{dataset}_bulk.h5ad", backed="r")
-        num_samples_eval = adata.n_obs
-        if "perturbation" not in adata.obs:
-            adata.obs["perturbation"] = "control"
-        num_unique_perturbations_eval = adata.obs["perturbation"].nunique()
-        stats_store.append({
+            adata = ad.read_h5ad(f"{TASK_GRN_INFERENCE_DIR}/resources/grn_benchmark/evaluation_data/{dataset}_bulk.h5ad", backed="r")
+            num_samples_eval = adata.n_obs
+            if "perturbation" not in adata.obs:
+                adata.obs["perturbation"] = "control"
+            num_unique_perturbations_eval = adata.obs["perturbation"].nunique()
+            stats_store.append({
             "Dataset": surrogate_names.get(dataset, dataset),
             "Unique perturbs": total_perturbations,
             "Cell type": info["cell_type"],
@@ -111,30 +120,35 @@ def main_datasets_stats():
             "Measurement time": info["Measurement time"],
             "Cell count": cell_count,
             "Modality": info["Modality"],
-            'Condition': "Crohn’s disease" if dataset=='ibd_cd' else  ('Ulcerative colitis' if dataset=='ibd_uc' else 'Healthy')
-        })
-    stats_df = pd.DataFrame(stats_store)
+                'Condition': "Crohn's disease" if dataset=='ibd_cd' else  ('Ulcerative colitis' if dataset=='ibd_uc' else 'Healthy')
+            })
+        stats_df = pd.DataFrame(stats_store)
+        
+        # Save to cache
+        stats_df.to_csv(stats_cache_file, index=False)
+        print(f"Saved stats cache to {stats_cache_file}")
+    
     print('Unique perturbs: ', stats_df['Unique perturbs'].sum())
     print('Cell count: ', stats_df[stats_df['Cell count'] != '-']['Cell count'].sum())
     print('Perturb type: ', stats_df['Perturb type'].nunique())
     print('Cell type: ', stats_df['Cell type'].nunique())
 
       
-    plot_table(stats_df, figsize=(1.3*stats_df.shape[1], 1.1*stats_df.shape[0]))
-    file_name = f'{figs_dir}/table_datasets_summary.pdf'
+    plot_table(stats_df, figsize=(1.3*stats_df.shape[1], .3*stats_df.shape[0]))
+    file_name = f'{figs_dir}/table_datasets_summary.png'
     print('dataset summary table: ', file_name)
-    plt.savefig(file_name, bbox_inches='tight')
+    plt.savefig(file_name, bbox_inches='tight', pad_inches=0.01, dpi=300)
 
-    file_name = f'{DOCS_IMAGES_DIR}/table_datasets_summary.pdf'
+    file_name = f'{DOCS_IMAGES_DIR}/table_datasets_summary.png'
     print('dataset summary table: ', file_name)
-    plt.savefig(file_name, bbox_inches='tight')
+    plt.savefig(file_name, bbox_inches='tight', pad_inches=0.01, dpi=300)
     plt.close()
 
     df_sub = stats_df[['Dataset', 'Cell type', 'Perturb type', 'Unique perturbs' ,'Condition', 'Modality']]
-    plot_table(df_sub, figsize=(1.3*df_sub.shape[1], 1.1*df_sub.shape[0]))
+    plot_table(df_sub, figsize=(1.3*df_sub.shape[1], .3*df_sub.shape[0]))
     file_name = f'{figs_dir}/table_datasets_summary_short.pdf'
     print('dataset summary table short: ', file_name)
-    plt.savefig(file_name, bbox_inches='tight')
+    plt.savefig(file_name, bbox_inches='tight', pad_inches=0.01, dpi=300)
     plt.close()
 
 def wrapper_plot_fc(perturb_effect_df, title=None):

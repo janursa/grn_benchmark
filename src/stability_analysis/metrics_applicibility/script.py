@@ -13,15 +13,14 @@ from pathlib import Path
 from collections import defaultdict
 import argparse
 
-# Add paths for imports
-sys.path.insert(0, str(Path(__file__).parent.parent))
-from src.helper import load_env, surrogate_names
-
+from grn_benchmark.src.helper import load_env, surrogate_names
 env = load_env()
+
 TASK_GRN_INFERENCE_DIR = env['TASK_GRN_INFERENCE_DIR']
 sys.path.append(f'{TASK_GRN_INFERENCE_DIR}/src/utils/')
 from task_grn_inference.src.utils.config import DATASETS, METRICS, METRIC_THRESHOLDS, METRICS_DATASETS
 
+DOCS_IMAGES_DIR = Path(env['DOCS_IMAGES_DIR'])
 
 
 parser = argparse.ArgumentParser(
@@ -273,6 +272,15 @@ def evaluate_all_datasets(datasets=None, metrics=None, cv_threshold=0.2, output_
         print(f"\n{'='*60}")
         print(f"Results saved to: {output_path}")
         print(f"{'='*60}")
+        
+        # Also save a summary of metrics that passed per dataset for easy consumption
+        # This will be used by create_overview_figure.py
+        kept_metrics = results_df[results_df['keep'] == True].groupby('dataset')['metric'].apply(list).to_dict()
+        summary_output = output_path.parent / 'metrics_kept_per_dataset.yaml'
+        import yaml
+        with open(summary_output, 'w') as f:
+            yaml.dump(kept_metrics, f)
+        print(f"Metrics summary saved to: {summary_output}")
     
     # Print summary statistics
     # print(f"\n{'='*60}")
@@ -453,8 +461,13 @@ def evaluate_all_datasets(datasets=None, metrics=None, cv_threshold=0.2, output_
     metadata_df = pd.DataFrame(metadata_rows, index=metric_summary.index)
     
     # Add metric name as a column for display with surrogate names
+    # Add ** to metrics that are in FINAL_METRICS
+    from task_grn_inference.src.utils.config import FINAL_METRICS
     metric_summary_display = metric_summary.copy()
-    metric_summary_display.insert(0, 'Metric', [surrogate_names.get(m, m) for m in metric_summary_display.index])
+    metric_summary_display.insert(0, 'Metric', [
+        surrogate_names.get(m, m) + '**' if m in FINAL_METRICS else surrogate_names.get(m, m) 
+        for m in metric_summary_display.index
+    ])
     
     # Select and order final columns: Summary, Inputs, Datasets, then the rest
     final_columns = ['Metric', 'Summary', 'Required Inputs', 'Datasets', 'Threshold', 'Keep/Total', 'Keep %', 'Value (min/max)', 'Variability (min/max)']
@@ -568,8 +581,11 @@ def evaluate_all_datasets(datasets=None, metrics=None, cv_threshold=0.2, output_
         # Save figure
         output_path_fig = str(Path(output_file).with_suffix('.png'))
         plt.savefig(output_path_fig, dpi=300, bbox_inches='tight', facecolor='white')
-        plt.close()
         print(f"Table figure saved to: {output_path_fig}")
+        
+        output_path_fig = DOCS_IMAGES_DIR / 'metric_quality_evaluation.png'
+        print(f"Also saving copy to: {output_path_fig}")
+        plt.savefig(output_path_fig, dpi=300, bbox_inches='tight', facecolor='white')
     
     # Recommended metrics per dataset
     if False:
