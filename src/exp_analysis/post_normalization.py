@@ -111,7 +111,7 @@ def plot_ranking_comparison(output_df, metrics=None, norm_methods=['SLA', 'PR'])
         ax.set_xticklabels([surrogate_names.get(n, n) for n in norm_methods], rotation=0)
         ax.set_ylabel('Rank (1=best)' if idx == 0 else '')
         ax.set_xlabel('')
-        ax.set_title(surrogate_names.get(metric, metric).replace(' (', ' \n(').replace('Replica consistency', 'Replica \nconsistency').replace('Gene sets recovery', 'Gene sets \nrecovery'), pad=10)
+        ax.set_title(surrogate_names.get(metric, metric).replace(' (', ' \n(').replace('Replicate consistency', 'Replica \nconsistency').replace('Gene sets recovery', 'Gene sets \nrecovery'), pad=10)
         ax.invert_yaxis()  # Lower rank (1) at top
         ax.grid(axis='y', alpha=0.3, linestyle='--')
         ax.spines[['top', 'right']].set_visible(False)

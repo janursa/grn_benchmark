@@ -402,9 +402,9 @@ def evaluate_all_datasets(datasets=None, metrics=None, cv_threshold=0.2, output_
             "Dataset Type Required": surrogate_names.get('de', 'de'),
             "Required Inputs": ", ".join([surrogate_names.get(i, i) for i in ['prediction', 'evaluation_data_de', 'tf_all']])
         },
-        'rc_tf_act': {
+        'replicate_consistency': {
             "Summary": "Measures consistency of GRN predictions across biological replicates/groups.",
-            "Applicable Datasets": METRICS_DATASETS.get('rc_tf_act', []),
+            "Applicable Datasets": METRICS_DATASETS.get('replicate_consistency', []),
             "Dataset Type Required": surrogate_names.get('sc', 'sc'),
             "Required Inputs": ", ".join([surrogate_names.get(i, i) for i in ['prediction', 'evaluation_data']])
         },
@@ -418,7 +418,7 @@ def evaluate_all_datasets(datasets=None, metrics=None, cv_threshold=0.2, output_
             "Summary": "Evaluates GRNs by their ability to recover known gene sets",
             "Applicable Datasets": METRICS_DATASETS.get('gs_recovery', []),
             "Dataset Type Required": surrogate_names.get('bulk', 'bulk'),
-            "Required Inputs": ", ".join([surrogate_names.get(i, i) for i in ['prediction', 'evaluation_data', 'Genesets']])
+            "Required Inputs": ", ".join([surrogate_names.get(i, i) for i in ['prediction', 'evaluation_data', 'Gene Sets']])
         }
     }
     

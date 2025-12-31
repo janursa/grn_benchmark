@@ -60,8 +60,8 @@ def main_metrics(par):
     from all_metrics.helper import main as main_metrics
     # from sem.helper import main as main_sem
     # from rc.helper import main as main_rc
-    # from rc_tf_act.helper import main as main_rc_tf_act
-    # rr = main_rc_tf_act(par)
+    # from replicate_consistency.helper import main as main_replicate_consistency
+    # rr = main_replicate_consistency(par)
     rr = main_metrics(par)
     return rr
 

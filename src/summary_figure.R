@@ -30,8 +30,8 @@ summary_all <- read_tsv(file_path)
 
 # Add the new column for method types
 # Using exact surrogate names from Python config:
-# FINAL_METRICS: r_precision, r_recall, vc, sem, ws_precision, ws_recall, t_rec_precision, t_rec_recall, rc_tf_act, tfb_f1, gs_f1
-# Their surrogate names: R (precision), R (recall), Virtual cell, SEM, WS (precision), WS (recall), TF recovery (precision), TF recovery (recall), Replica consistency, TF binding, Gene sets
+# FINAL_METRICS: r_precision, r_recall, vc, sem, ws_precision, ws_recall, t_rec_precision, t_rec_recall, replicate_consistency, tfb_f1, gs_f1
+# Their surrogate names: R (precision), R (recall), Virtual cell, SEM, WS (precision), WS (recall), TF recovery (precision), TF recovery (recall), Replicate consistency, TF binding, Gene sets
 column_info <- bind_rows(
   tribble(
     ~id, ~id_color, ~name, ~group, ~geom, ~palette, ~options,
@@ -47,7 +47,7 @@ column_info <- bind_rows(
     "WS (recall)", "WS (recall)", "WS distance (recall)", "metric_1", "funkyrect",  "metric_1", list(width = 1.5),
     "TF recovery (precision)", "TF recovery (precision)", "TF recovery (precision)", "metric_1", "funkyrect",  "metric_1", list(width = 1.5),
     "TF recovery (recall)", "TF recovery (recall)", "TF recovery (recall)", "metric_1", "funkyrect",  "metric_1", list(width = 1.5),
-    "Replica consistency", "Replica consistency", "Replica consistency", "metric_1", "funkyrect",  "metric_1", list(width = 1.5),
+    "Replicate consistency", "Replicate consistency", "Replicate consistency", "metric_1", "funkyrect",  "metric_1", list(width = 1.5),
     "TF binding", "TF binding", "TF binding", "metric_1", "funkyrect",  "metric_1", list(width = 1.5),
     "Gene sets recovery", "Gene sets recovery", "Gene sets recovery", "metric_1", "funkyrect",  "metric_1", list(width = 1.5),
     # Datasets with surrogate names: OPSCA, ParseBioscience, 300BCG, IBD:UC, IBD:CD, Replogle, Xaira:HEK293T, Xaira:HCT116, Nakatake, Norman
