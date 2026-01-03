@@ -12,6 +12,7 @@ import pandas as pd
 import numpy as np
 import yaml
 from pathlib import Path
+import argparse
 
 # Add grn_benchmark to path and load environment
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -58,6 +59,15 @@ def process_scores_from_yaml(score_file):
     # Pivot to get the same format as read_yaml
     scores_all = df.pivot_table(index=['dataset', 'model'], columns='metric', values='value').reset_index()
     
+    return scores_all
+
+
+def process_scores_from_csv(score_file):
+    """Process all_scores.csv for local runs."""
+    scores_all = pd.read_csv(score_file)
+    # Rename 'method' to 'model' to match expected format
+    if 'method' in scores_all.columns:
+        scores_all = scores_all.rename(columns={'method': 'model'})
     return scores_all
 
 
@@ -180,15 +190,19 @@ def process_trace_to_csv(trace_file):
     return df_resources
 
 
-def main():
-    """Main function - follows the exact logic from process_results.ipynb."""
+def main(local_run=False, methods=None, datasets=None):
     
     # Get paths from environment
     results_folder = f'{TASK_GRN_INFERENCE_DIR}/resources/results'
     
     combined_dir = Path(results_folder) / 'all_new'
     trace_file = combined_dir / 'trace.csv'
-    score_file = combined_dir / 'score_uns.yaml'
+    
+    # Choose score file based on mode
+    if local_run:
+        score_file = combined_dir / 'all_scores.csv'
+    else:
+        score_file = combined_dir / 'score_uns.yaml'
     
     print("=" * 80)
     print("Creating Overview Figure")
@@ -196,6 +210,8 @@ def main():
     print(f"\nUsing base directory: {TASK_GRN_INFERENCE_DIR}")
     print(f"Results folder: {results_folder}")
     print(f"Combined directory: {combined_dir}")
+    print(f"Mode: {'LOCAL RUN' if local_run else 'AWS'}")
+    print(f"Score file: {score_file}")
     
     # Step 1: Process trace file (only op dataset)
     print("\n1. Processing trace data (op dataset only)...")
@@ -203,8 +219,21 @@ def main():
     
     # Step 2: Process scores (all datasets)
     print("\n2. Processing scores (all datasets)...")
-    scores_all = process_scores_from_yaml(score_file)
-    scores_all = scores_all[scores_all['model'].isin(METHODS)]
+    if local_run:
+        print("   Using local mode: reading from all_scores.csv...")
+        scores_all = process_scores_from_csv(score_file)
+    else:
+        print("   Using AWS mode: reading from score_uns.yaml...")
+        scores_all = process_scores_from_yaml(score_file)
+    
+    # Filter by methods if specified
+    if methods is not None:
+        scores_all = scores_all[scores_all['model'].isin(methods)]
+    
+    # Filter by datasets if specified
+    if datasets is not None:
+        scores_all = scores_all[scores_all['dataset'].isin(datasets)]
+    
     print(f"   Loaded scores for {len(scores_all)} method-dataset combinations")
     print(f"   Datasets: {sorted(scores_all['dataset'].unique().tolist())}")
     print(f"   Methods: {sorted(scores_all['model'].unique().tolist())}")
@@ -326,6 +355,13 @@ def main():
     # Calculate overall scores
     df_scores = pd.concat([df_metrics, df_datasets], axis=1)
     
+    # Remove columns (metrics/datasets) that are all NaN across all methods
+    cols_before = len(df_scores.columns)
+    df_scores = df_scores.dropna(axis=1, how='all')
+    cols_after = len(df_scores.columns)
+    if cols_before > cols_after:
+        print(f"   Removed {cols_before - cols_after} columns that were all NaN")
+    
     # Handle any duplicate index entries
     if df_scores.index.duplicated().any():
         print(f"   Warning: Found duplicate methods in scores, taking mean")
@@ -342,8 +378,15 @@ def main():
     
     print(f"   Overall scores calculated using only FINAL_METRICS ({len(final_metrics_cols)} metrics) + datasets ({len(dataset_cols)} datasets)")
     
+    # Keep track of which methods are in the filtered scores
+    methods_in_scores = df_scores.index.tolist()
+    
     # Merge scores with resources
     df_summary = pd.concat([df_scores, df_res], axis=1)
+    
+    # Filter to only include methods that were in the filtered scores
+    df_summary = df_summary[df_summary.index.isin(methods_in_scores)]
+    
     df_summary = df_summary.fillna(0)
     df_summary.index.name = 'method_name'
     df_summary = df_summary.reset_index()
@@ -436,5 +479,34 @@ def main():
 
 
 if __name__ == '__main__':
-    exit(main())
+    parser = argparse.ArgumentParser(
+        description='Create overview figure from combined results'
+    )
+    parser.add_argument(
+        '--local_run',
+        action='store_true',
+        help='Use local run mode - read scores from all_scores.csv instead of score_uns.yaml'
+    )
+    parser.add_argument(
+        '--methods',
+        nargs='+',
+        default=None,
+        help='List of methods to include (space-separated). If not provided, uses METHODS from config.'
+    )
+    parser.add_argument(
+        '--datasets',
+        nargs='+',
+        default=None,
+        help='List of datasets to include (space-separated). If not provided, uses DATASETS from config.'
+    )
+    
+    args = parser.parse_args()
+    
+    # If methods not provided, use METHODS from config
+    methods_to_use = args.methods if args.methods else METHODS
+    
+    # If datasets not provided, use DATASETS from config
+    datasets_to_use = args.datasets if args.datasets else DATASETS
+    
+    exit(main(local_run=args.local_run, methods=methods_to_use, datasets=datasets_to_use))
 
