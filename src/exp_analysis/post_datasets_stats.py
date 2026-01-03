@@ -45,6 +45,7 @@ def plot_table(summary, figsize=(6,6)):
         colLabels=summary.columns,
         cellLoc="center",
         loc="center",
+        bbox=[0, 0, 1, 1]
     )
     tbl.auto_set_font_size(False)
     tbl.set_fontsize(12)
@@ -66,7 +67,7 @@ def plot_table(summary, figsize=(6,6)):
         tbl[(r, n_cols - 1)].set_linewidth(1.2)
     for c in range(n_cols):
         tbl[(n_rows - 1, c)].set_linewidth(1.2)
-    plt.tight_layout()
+    plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
   
 def main_datasets_stats(force=False):
     stats_cache_file = f'{RESULTS_DIR}/datasets_stats_cache.csv'
@@ -134,21 +135,25 @@ def main_datasets_stats(force=False):
     print('Cell type: ', stats_df['Cell type'].nunique())
 
       
+<<<<<<< HEAD
     plot_table(stats_df, figsize=(1.3*stats_df.shape[1], 1.1*stats_df.shape[0]))
+=======
+    plot_table(stats_df, figsize=(1.3*stats_df.shape[1], .3*stats_df.shape[0]))
+>>>>>>> 8f2ceb44c07e8c290a90f8471680e8dede119e48
     file_name = f'{figs_dir}/table_datasets_summary.png'
     print('dataset summary table: ', file_name)
-    plt.savefig(file_name, bbox_inches='tight')
+    plt.savefig(file_name, bbox_inches='tight', pad_inches=0.01, dpi=300)
 
     file_name = f'{DOCS_IMAGES_DIR}/table_datasets_summary.png'
     print('dataset summary table: ', file_name)
-    plt.savefig(file_name, bbox_inches='tight')
+    plt.savefig(file_name, bbox_inches='tight', pad_inches=0.01, dpi=300)
     plt.close()
 
     df_sub = stats_df[['Dataset', 'Cell type', 'Perturb type', 'Unique perturbs' ,'Condition', 'Modality']]
-    plot_table(df_sub, figsize=(1.3*df_sub.shape[1], 1.1*df_sub.shape[0]))
+    plot_table(df_sub, figsize=(1.3*df_sub.shape[1], .3*df_sub.shape[0]))
     file_name = f'{figs_dir}/table_datasets_summary_short.pdf'
     print('dataset summary table short: ', file_name)
-    plt.savefig(file_name, bbox_inches='tight')
+    plt.savefig(file_name, bbox_inches='tight', pad_inches=0.01, dpi=300)
     plt.close()
 
 def wrapper_plot_fc(perturb_effect_df, title=None):

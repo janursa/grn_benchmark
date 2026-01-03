@@ -18,7 +18,7 @@ from src.params import get_par
 def main_metrics(par):
     # from all_metrics.helper import main as main_metrics
     from regression.helper import main as main_reg
-    # from replica_consistency.helper import main as main_rc
+    # from replicate_consistency.helper import main as main_rc
     # out_rc = main_rc(par)
     _, output = main_reg(par)
     # output = pd.concat([out_reg, out_rc], axis=1)

@@ -47,7 +47,7 @@ column_info <- bind_rows(
     "WS (recall)", "WS (recall)", "WS distance (recall)", "metric_1", "funkyrect",  "metric_1", list(width = 1.5),
     "TF recovery (precision)", "TF recovery (precision)", "TF recovery (precision)", "metric_1", "funkyrect",  "metric_1", list(width = 1.5),
     "TF recovery (recall)", "TF recovery (recall)", "TF recovery (recall)", "metric_1", "funkyrect",  "metric_1", list(width = 1.5),
-    "Replica consistency", "Replica consistency", "Replica consistency", "metric_1", "funkyrect",  "metric_1", list(width = 1.5),
+    "Replicate consistency", "Replicate consistency", "Replicate consistency", "metric_1", "funkyrect",  "metric_1", list(width = 1.5),
     "TF binding", "TF binding", "TF binding", "metric_1", "funkyrect",  "metric_1", list(width = 1.5),
     "Gene sets recovery", "Gene sets recovery", "Gene sets recovery", "metric_1", "funkyrect",  "metric_1", list(width = 1.5),
     # Datasets with surrogate names: OPSCA, ParseBioscience, 300BCG, IBD:UC, IBD:CD, Replogle, Xaira:HEK293T, Xaira:HCT116, Nakatake, Norman

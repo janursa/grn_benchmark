@@ -8,6 +8,7 @@ import pandas as pd
 from pathlib import Path
 from collections import OrderedDict
 import sys
+import argparse
 # Add grn_benchmark to path and load environment
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from src.helper import load_env, surrogate_names, read_yaml
@@ -16,9 +17,9 @@ env = load_env()
 TASK_GRN_INFERENCE_DIR = env['TASK_GRN_INFERENCE_DIR']
 # Add paths for imports
 sys.path.append(f'{TASK_GRN_INFERENCE_DIR}/src/utils/')
-from task_grn_inference.src.utils.config import DATASETS
+from task_grn_inference.src.utils.config import DATASETS, METRICS
 
-def combine_results():
+def combine_results(local_run=False):
     """Combine results from individual dataset folders into all_new folder."""
     
     base_dir =  Path(f'{TASK_GRN_INFERENCE_DIR}/resources/results')
@@ -29,66 +30,73 @@ def combine_results():
     
     print(f"Processing {len(DATASETS)} datasets: {DATASETS}")
     
-    # 1. Combine trace_merged.txt files
-    print("\n1. Combining trace_merged.txt files...")
-    all_traces = []
+    # 1. Copy trace_merged.txt file from 'op' dataset only
+    print("\n1. Copying trace_merged.txt file (using only 'op' dataset)...")
     
-    for dataset in DATASETS:
-        trace_path = base_dir / dataset / 'trace_merged.txt'
-        
-        if not trace_path.exists():
-            print(f"  Warning: {trace_path} not found, skipping...")
-            continue
-        
-        print(f"  Reading trace from {dataset}...")
-        df = pd.read_csv(trace_path, sep='\t')
-        all_traces.append(df)
+    trace_dataset = 'op'
+    trace_path = base_dir / trace_dataset / 'trace_merged.txt'
     
-    if all_traces:
-        # Combine all traces and remove duplicates
-        combined_traces = pd.concat(all_traces, ignore_index=True)
-        combined_traces = combined_traces.drop_duplicates(subset=['name'])
-        
-        # Save combined trace
+    if trace_path.exists():
+        print(f"  Reading trace from {trace_dataset}...")
+        trace_df = pd.read_csv(trace_path, sep='\t')
+        trace_df = trace_df.drop_duplicates(subset=['name'])
+        # Save trace
         output_trace = save_dir / 'trace.csv'
-        combined_traces.to_csv(output_trace, sep='\t', index=False)
-        print(f"  Saved combined trace to {output_trace}")
-        print(f"  Total unique entries: {len(combined_traces)}")
+        trace_df.to_csv(output_trace, sep='\t', index=False)
+        print(f"  Saved trace to {output_trace}")
+        print(f"  Total unique entries: {len(trace_df)}")
     else:
-        print("  No trace files found!")
+        print(f"  Warning: {trace_path} not found!")
     
-    # 2. Combine score_uns.yaml files
-    print("\n2. Combining score_uns.yaml files...")
-    merged_scores = []
+    # 2. Combine score files
+    print("\n2. Combining score files...")
     
-    for dataset in DATASETS:
-        score_path = base_dir / dataset / 'score_uns.yaml'
+    if local_run:
+        # Copy all_scores.csv directly (local run mode)
+        print("  Using local run mode - copying all_scores.csv...")
+        scores_path = base_dir / 'all_scores.csv'
         
-        if not score_path.exists():
-            print(f"  Warning: {score_path} not found, skipping...")
-            continue
+        if scores_path.exists():
+            print(f"  Copying scores from {scores_path}...")
+            import shutil
+            output_scores = save_dir / 'all_scores.csv'
+            shutil.copy(scores_path, output_scores)
+            print(f"  Saved combined scores to {output_scores}")
+        else:
+            print(f"  Warning: {scores_path} not found!")
+    else:
+        # Read from individual score_uns.yaml files (AWS mode)
+        print("  Using AWS mode - reading from individual score_uns.yaml files...")
+        merged_scores = []
         
-        print(f"  Reading scores from {dataset}...")
-        with open(score_path, 'r') as f:
-            data = yaml.safe_load(f)
+        for dataset in DATASETS:
+            score_path = base_dir / dataset / 'score_uns.yaml'
             
-            # Filter out None and missing entries
-            if data:
-                if isinstance(data, dict):
-                    if 'missing' not in str(data):
-                        merged_scores.append(data)
-                elif isinstance(data, list):
-                    valid_data = [d for d in data if d is not None and 'missing' not in str(d)]
-                    merged_scores.extend(valid_data)
-    
-    if merged_scores:
-        output_scores = save_dir / 'score_uns.yaml'
-        with open(output_scores, 'w') as f:
-            yaml.dump(merged_scores, f)
-        print(f"  Saved combined scores to {output_scores}")
-        print(f"  Total score entries: {len(merged_scores)}")
-    else:
-        print("  No score files found!")
+            if not score_path.exists():
+                print(f"  Warning: {score_path} not found, skipping...")
+                continue
+            
+            print(f"  Reading scores from {dataset}...")
+            with open(score_path, 'r') as f:
+                data = yaml.safe_load(f)
+                
+                # Filter out None and missing entries
+                if data:
+                    if isinstance(data, dict):
+                        if 'missing' not in str(data):
+                            merged_scores.append(data)
+                    elif isinstance(data, list):
+                        valid_data = [d for d in data if d is not None and 'missing' not in str(d)]
+                        merged_scores.extend(valid_data)
+        
+        if merged_scores:
+            output_scores = save_dir / 'score_uns.yaml'
+            with open(output_scores, 'w') as f:
+                yaml.dump(merged_scores, f)
+            print(f"  Saved combined scores to {output_scores}")
+            print(f"  Total score entries: {len(merged_scores)}")
+        else:
+            print("  No score files found!")
     
     # 3. Combine dataset_uns.yaml files
     print("\n3. Combining dataset_uns.yaml files...")
@@ -142,4 +150,14 @@ def combine_results():
     print(f"Output directory: {save_dir}")
 
 if __name__ == '__main__':
-    combine_results()
+    parser = argparse.ArgumentParser(
+        description='Combine results from individual dataset folders'
+    )
+    parser.add_argument(
+        '--local_run',
+        action='store_true',
+        help='Use local run mode - read scores from all_scores.csv instead of individual YAML files'
+    )
+    
+    args = parser.parse_args()
+    combine_results(local_run=args.local_run)

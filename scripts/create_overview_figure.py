@@ -209,6 +209,32 @@ def main():
     print(f"   Datasets: {sorted(scores_all['dataset'].unique().tolist())}")
     print(f"   Methods: {sorted(scores_all['model'].unique().tolist())}")
     
+    # Step 2.5: Load metrics that passed criteria from metrics_applicibility
+    print("\n2.5. Loading metrics that passed applicability criteria...")
+    metrics_kept_file = Path(f'{TASK_GRN_INFERENCE_DIR}/resources/results/experiment/metrics_kept_per_dataset.yaml')
+    
+    if not metrics_kept_file.exists():
+        raise FileNotFoundError(f"Metrics kept file not found: {metrics_kept_file}")
+    else:
+        with open(metrics_kept_file, 'r') as f:
+            metrics_kept_per_dataset = yaml.safe_load(f)
+        
+        # Get metrics that passed for at least one dataset
+        all_kept_metrics = set()
+        for dataset, metric_list in metrics_kept_per_dataset.items():
+            all_kept_metrics.update(metric_list)
+        
+        print(f"   Loaded metrics that passed criteria: {len(all_kept_metrics)} metrics")
+        print(f"   Metrics: {sorted(all_kept_metrics)}")
+        
+        # Filter FINAL_METRICS to only include those that passed
+        final_metrics_filtered = [m for m in FINAL_METRICS if m in all_kept_metrics]
+        print(f"   FINAL_METRICS filtered from {len(FINAL_METRICS)} to {len(final_metrics_filtered)} metrics")
+        
+        # Use filtered metrics for ranking
+        FINAL_METRICS_TO_USE = final_metrics_filtered
+    
+    
     # Step 3: Process scores - EXACT LOGIC FROM NOTEBOOK
     print("\n3. Creating summary dataframe...")
     
@@ -216,9 +242,10 @@ def main():
     metrics = [m for m in scores_all.columns.tolist() if m in METRICS]
     print(f"   Using all METRICS for display: {len(metrics)} metrics")
     
-    # Get only FINAL_METRICS for ranking
-    final_metrics = [m for m in METRICS if m in FINAL_METRICS]
-    print(f"   Using FINAL_METRICS for ranking: {len(final_metrics)} metrics")
+    # Get only FINAL_METRICS for ranking (filtered by applicability)
+    final_metrics = [m for m in METRICS if m in FINAL_METRICS_TO_USE]
+    print(f"   Using filtered FINAL_METRICS for ranking: {len(final_metrics)} metrics")
+    print(f"   Ranking metrics: {final_metrics}")
     
     # Normalize the scores per dataset
     def normalize_scores_per_dataset(df):
@@ -394,6 +421,12 @@ def main():
         print("\nStdout:")
         print(result.stdout)
         return 1
+    # also save it to docs folder
+    DOCS_IMAGES_DIR = Path(env['DOCS_IMAGES_DIR'])
+    doc_png = DOCS_IMAGES_DIR / 'summary_figure.png'
+    cmd = f"cp {summary_figure}.png {doc_png}"
+    subprocess.run(cmd, shell=True)
+    print(f"\n✓ Also saved figure to docs folder: {doc_png}")
     
     print("\n" + "=" * 80)
     print("Done!")
