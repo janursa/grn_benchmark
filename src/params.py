@@ -5,7 +5,7 @@ import sys
 env = os.environ  
 sys.path.append(env['UTILS_DIR'])
 
-def get_reg2_par(dataset):
+def get_regression_par(dataset):
     par = {
         'evaluation_data': f"{env['EVALUATION_DIR']}/{dataset}_bulk.h5ad",
         'tf_all': f"{env['PRIOR_DIR']}/tf_all.csv",

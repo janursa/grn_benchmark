@@ -30,7 +30,7 @@ summary_all <- read_tsv(file_path)
 
 # Add the new column for method types
 # Using exact surrogate names from Python config:
-# FINAL_METRICS: r_precision, r_recall, vc, sem, ws_precision, ws_recall, t_rec_precision, t_rec_recall, rc_tf_act, tfb_f1, gs_f1
+# FINAL_METRICS: r_precision, r_recall, vc, sem, ws_precision, ws_recall, t_rec_precision, t_rec_recall, replicate_consistency, tfb_f1, gs_f1
 # Their surrogate names: R (precision), R (recall), Virtual cell, SEM, WS (precision), WS (recall), TF recovery (precision), TF recovery (recall), Replica consistency, TF binding, Gene sets
 column_info <- bind_rows(
   tribble(

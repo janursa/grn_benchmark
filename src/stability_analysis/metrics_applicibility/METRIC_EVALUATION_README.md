@@ -51,7 +51,7 @@ Based on analysis of metric implementation in `task_grn_inference/src/metrics/`,
 | **sem** | 0.4 | Structural Equation Modeling fit; >0.4 indicates acceptable fit |
 | **t_rec_precision** | 0.1 | TF recovery precision; >0.1 indicates meaningful TF identification |
 | **t_rec_recall** | 0.1 | TF recovery recall; >0.1 indicates meaningful TF identification |
-| **rc_tf_act** | 0.3 | Replica consistency correlation; >0.3 indicates good consistency |
+| **replicate_consistency** | 0.3 | Replica consistency correlation; >0.3 indicates good consistency |
 | **tfb_f1** | 0.05 | TF binding F1; lower threshold due to difficulty of task |
 | **gs_f1** | 0.1 | Gene set recovery F1; >0.1 indicates meaningful enrichment |
 
@@ -76,15 +76,15 @@ Based on analysis of metric implementation in `task_grn_inference/src/metrics/`,
 - `ws_recall`: 0/4 datasets (low variability)
 
 **Metrics with moderate success**:
-- `rc_tf_act`: 2/3 datasets
+- `replicate_consistency`: 2/3 datasets
 - `t_rec_precision`: 2/3 datasets
 - `t_rec_recall`: 2/3 datasets
 
 ### Recommended Metrics per Dataset
 
-**op**: `r_precision`, `rc_tf_act`, `tfb_f1`, `gs_f1`
-**parsebioscience**: `r_precision`, `rc_tf_act`, `tfb_f1`, `gs_f1`
-**300BCG**: `r_precision`, `rc_tf_act`, `tfb_f1`, `gs_f1`
+**op**: `r_precision`, `replicate_consistency`, `tfb_f1`, `gs_f1`
+**parsebioscience**: `r_precision`, `replicate_consistency`, `tfb_f1`, `gs_f1`
+**300BCG**: `r_precision`, `replicate_consistency`, `tfb_f1`, `gs_f1`
 **ibd_uc**: `r_precision`, `tfb_f1`, `gs_f1`
 **ibd_cd**: `r_precision`, `tfb_f1`, `gs_f1`
 **replogle**: `r_precision`, `r_recall`, `t_rec_precision`, `t_rec_recall`, `tfb_f1`, `gs_f1`

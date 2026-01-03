@@ -26,7 +26,7 @@ sys.path.append(meta["util_dir"])
 from all_metrics.helper import main as main_metrics
 from params import get_par
 # from ws_distance.consensus.helper import main as main_consensus_ws_distance
-# from regression.consensus.helper import main as main_consensus_reg2
+# from regression.consensus.helper import main as main_consensus_regression
 def prediction_file_name(dataset, data_type):
     return f'{results_dir}/{dataset}.prediction_{data_type}.h5ad'
 
@@ -90,7 +90,7 @@ if __name__ == '__main__':
         #     par['dataset'] = dataset
         #     par['models_dir'] = results_dir
         #     par['models'] = ['prediction_bulk', 'prediction_sc']
-        #     _ = main_consensus_reg2(par)
+        #     _ = main_consensus_regression(par)
         #     main_consensus_ws_distance(par)
 
         # - grn evaluation

@@ -15,7 +15,7 @@ sys.path.append(env["UTILS_DIR"])
 
 from util import naming_convention as naming_convention_main
 from ws_distance.consensus.helper import main as main_consensus_ws_distance
-from regression.consensus.helper import main as main_consensus_reg2
+from regression.consensus.helper import main as main_consensus_regression
 
 sys.path.append(env['TASK_GRN_INFERENCE_DIR'])
 from src.metrics.all_metrics.helper import main as main_metrics

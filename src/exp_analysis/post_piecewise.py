@@ -277,9 +277,9 @@ def wrapper_plot_regression(gene_wise_output):
 
 
 
-def plot_reg2_feature_stability_scores(scores_store_all_reg2, ax):
+def plot_regression_feature_stability_scores(scores_store_all_regression, ax):
     from scipy.stats import mannwhitneyu
-    scores_store_present = scores_store_all_reg2[scores_store_all_reg2['present']]
+    scores_store_present = scores_store_all_regression[scores_store_all_regression['present']]
     df_common_pivot = scores_store_present.pivot(index=['model'], columns=['donor_id','gene'], values='feature_importance_mean2std').dropna(axis=1)
     common_genes = df_common_pivot.columns.get_level_values('gene').unique()
     df = df_common_pivot
@@ -305,9 +305,9 @@ def plot_reg2_feature_stability_scores(scores_store_all_reg2, ax):
             color='red'
         )
         i+=1
-def plot_tf_activity_grn_derived(scores_store_all_reg2, ax):
-    top_95_quantile = scores_store_all_reg2['contextual_tf_activity'].quantile(.98)
-    filtered_data = scores_store_all_reg2[scores_store_all_reg2['contextual_tf_activity'] <= top_95_quantile]
+def plot_tf_activity_grn_derived(scores_store_all_regression, ax):
+    top_95_quantile = scores_store_all_regression['contextual_tf_activity'].quantile(.98)
+    filtered_data = scores_store_all_regression[scores_store_all_regression['contextual_tf_activity'] <= top_95_quantile]
     sns.violinplot(filtered_data, x='present', y='contextual_tf_activity', linewidth=0.5,  cut=0, inner=None, ax=ax, palette=colors_blind)
 
     ax.set_ylabel('Contextual TF\nactivation score')
@@ -321,7 +321,7 @@ def plot_tf_activity_grn_derived(scores_store_all_reg2, ax):
     sigs = ['*','','','','']
     positions = [.3]*5
     i = 0
-    for ii, row_name in enumerate(range(scores_store_all_reg2['model'].nunique())):
+    for ii, row_name in enumerate(range(scores_store_all_regression['model'].nunique())):
         ax.text(
             i,  # x-coordinate
             positions[ii],  # Position above the highest point in the box
@@ -332,16 +332,16 @@ def plot_tf_activity_grn_derived(scores_store_all_reg2, ax):
             color='red'
         )
         i+=1
-def plot_joint_reg2_tf_activity_vs_nregulators(scores_store_all_reg2, ax, top_plot=True):
-    custom_jointplot(scores_store_all_reg2,x = 'n_regulator', 
+def plot_joint_regression_tf_activity_vs_nregulators(scores_store_all_regression, ax, top_plot=True):
+    custom_jointplot(scores_store_all_regression,x = 'n_regulator', 
              y = 'contextual_tf_activity', 
              hue= 'present', ax=ax, scatter_kws={'s':20})
     ax.legend(title="GRN-derived", frameon=False)
     ax.set_xlabel("Number of regulators")
     ax.set_ylabel("contextual_tf_activity")
-def plot_joint_reg2_r2scores_vs_nregulators(scores_store_all_reg2, ax, palette_present, top_plot=True):
+def plot_joint_regression_r2scores_vs_nregulators(scores_store_all_regression, ax, palette_present, top_plot=True):
     custom_jointplot(
-        scores_store_all_reg2,
+        scores_store_all_regression,
         x='n_regulator',
         y='r2score',
         hue='present',
@@ -351,7 +351,7 @@ def plot_joint_reg2_r2scores_vs_nregulators(scores_store_all_reg2, ax, palette_p
     )
     ax.set_xlabel("Number of regulators")
     ax.set_ylabel("Performance")
-def plot_reg2_perfromance_similarity_donors(scores_store_all_reg2, axes):
+def plot_regression_perfromance_similarity_donors(scores_store_all_regression, axes):
     def plot_heatmap_local(corr_matrix, ax, vmin, vmax):
         np.fill_diagonal(corr_matrix.values, np.nan)  # Optional: mask diagonal
         sns.heatmap(
@@ -366,13 +366,13 @@ def plot_reg2_perfromance_similarity_donors(scores_store_all_reg2, axes):
         ax.set_xlabel("")
         ax.set_ylabel("")
         ax.tick_params('y', rotation=0)
-    scores_store_table = scores_store_all_reg2[scores_store_all_reg2['present']][['donor_id', 'r2score', 'model', 'gene']].pivot(
+    scores_store_table = scores_store_all_regression[scores_store_all_regression['present']][['donor_id', 'r2score', 'model', 'gene']].pivot(
         index='donor_id', 
         values='r2score', 
         columns=['model', 'gene']
     )
     corr_matrix_grn = scores_store_table.T.corr(method='spearman')
-    scores_store_table = scores_store_all_reg2[~scores_store_all_reg2['present']][['donor_id', 'r2score', 'model', 'gene']].pivot(
+    scores_store_table = scores_store_all_regression[~scores_store_all_regression['present']][['donor_id', 'r2score', 'model', 'gene']].pivot(
         index='donor_id', 
         values='r2score', 
         columns=['model', 'gene']
@@ -443,7 +443,7 @@ def wrapper_regression_feature_analysis(dataset, gene_wise_feature_importance):
 
             fig, axes = plt.subplots(1, 2, figsize=(2.7, 2), width_ratios=[1.5, 1], sharey=True)
             ax = axes[0]
-            plot_reg2_feature_stability_scores(scores_reg, ax)
+            plot_regression_feature_stability_scores(scores_reg, ax)
             ax.set_ylabel('')
             ax = axes[1]
             plot_tf_activity_grn_derived(scores_reg, ax)
@@ -458,7 +458,7 @@ def wrapper_regression_feature_analysis(dataset, gene_wise_feature_importance):
             fig, ax = plt.subplots(1, 1, figsize=(2.5, 2.5), sharex=True)
             palette_present = {True: colors_blind[0], False: colors_blind[1]}
             print(palette_present)
-            plot_joint_reg2_r2scores_vs_nregulators(scores_reg, ax, palette_present, top_plot=True)
+            plot_joint_regression_r2scores_vs_nregulators(scores_reg, ax, palette_present, top_plot=True)
             legend_elements = [
                 Line2D([0], [0], marker='o', color='w', markerfacecolor=palette_present[val],
                     markersize=10, label=str(val))
@@ -466,16 +466,16 @@ def wrapper_regression_feature_analysis(dataset, gene_wise_feature_importance):
             ]
             ax.legend(handles=legend_elements, loc=(1.22, 0.3),
                     frameon=False, title="Gene has regulator")
-            file_name = f"{RESULTS_DIR}/figs/reg2_nregulators_vs_r2scoes_{dataset}_{theta}.png"
+            file_name = f"{RESULTS_DIR}/figs/regression_nregulators_vs_r2scoes_{dataset}_{theta}.png"
             print(f"Saving figure to {file_name}")
             plt.savefig(file_name, dpi=300, transparent=True, bbox_inches='tight')
         if True:
             ### Similary of scores across donors
             fig, axes = plt.subplots(1, 2, figsize=(3.5, 1.5), sharey=True)
 
-            plot_reg2_perfromance_similarity_donors(scores_reg, axes)
+            plot_regression_perfromance_similarity_donors(scores_reg, axes)
 
-            file_name = f"{RESULTS_DIR}/figs/reg2_scores_similarity_donors_{dataset}_{theta}.png"
+            file_name = f"{RESULTS_DIR}/figs/regression_scores_similarity_donors_{dataset}_{theta}.png"
             print(f"Saving figure to {file_name}")
             fig.savefig(
                 file_name, 
@@ -487,7 +487,7 @@ def wrapper_regression_feature_analysis(dataset, gene_wise_feature_importance):
             ### Similariy of scores across models
             fig, ax = plt.subplots(1, 1, figsize=(3, 3), constrained_layout=True)
             plot_performance_similarity_models_reg(scores_reg, ax)
-            file_name = f"{RESULTS_DIR}/figs/reg2_models_corr_{dataset}_{theta}.png"
+            file_name = f"{RESULTS_DIR}/figs/regression_models_corr_{dataset}_{theta}.png"
             print(f"Saving figure to {file_name}")
             fig.savefig(file_name, dpi=300, transparent=True, bbox_inches='tight')
 
@@ -508,7 +508,7 @@ def wrapper_regression_feature_analysis(dataset, gene_wise_feature_importance):
             ]
         ax.legend(handles=legend_elements, loc=(1.3, 0), frameon=False, title='Gene has regulator in:')
         plt.tight_layout()
-        file_name = f"{RESULTS_DIR}/figs/reg2_joint_tfactivity_vs_r2scores_{dataset}_{theta}.png"
+        file_name = f"{RESULTS_DIR}/figs/regression_joint_tfactivity_vs_r2scores_{dataset}_{theta}.png"
         print(f"Saving figure to {file_name}")
         plt.savefig(file_name, dpi=300, transparent=True, bbox_inches='tight')
 
