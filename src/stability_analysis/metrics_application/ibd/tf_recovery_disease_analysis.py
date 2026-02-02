@@ -30,7 +30,7 @@ warnings.filterwarnings("ignore")
 
 # Add paths
 
-from grn_benchmark.src.helper import load_env, surrogate_names
+from geneRNBI.src.helper import load_env, surrogate_names
 
 env = load_env()
 TASK_GRN_INFERENCE_DIR = env['TASK_GRN_INFERENCE_DIR']

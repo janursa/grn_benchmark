@@ -22,7 +22,7 @@ import argparse
 
 # Add paths
 sys.path.append('/Users/jno24/Documents/projs/ongoing/grn_benchmark')
-from grn_benchmark.src.helper import load_env
+from geneRNBI.src.helper import load_env
 
 env = load_env()
 

@@ -7,12 +7,12 @@ else
 fi
 
 echo "Base directory set to: $base_dir"
-export GRN_BENCHMARK_DIR="${base_dir}/grn_benchmark" #->file directiory
+export geneRNBI_DIR="${base_dir}/geneRNBI" #->file directiory
 export TASK_GRN_INFERENCE_DIR="${base_dir}/task_grn_inference" #-> it's ../../task_grn_inference
 export DOCS_SOURCE_DIR="${TASK_GRN_INFERENCE_DIR}/docs/source"
 export DOCS_IMAGES_DIR="${DOCS_SOURCE_DIR}/images"
 
-export PYTHONPATH="$GRN_BENCHMARK_DIR:${PYTHONPATH:-}"
+export PYTHONPATH="$geneRNBI_DIR:${PYTHONPATH:-}"
 
 export RESULTS_DIR="${TASK_GRN_INFERENCE_DIR}/resources/results"
 export IMAGES_DIR="/home/jnourisa/projs/images"
@@ -27,7 +27,7 @@ export UTILS_DIR="${TASK_GRN_INFERENCE_DIR}/src/utils"
 
 # echo "Environment variables set:"
 # echo "TASK_GRN_INFERENCE_DIR=$TASK_GRN_INFERENCE_DIR"
-# echo "GRN_BENCHMARK_DIR=$GRN_BENCHMARK_DIR"
+# echo "geneRNBI_DIR=$geneRNBI_DIR"
 # echo "RESULTS_DIR=$RESULTS_DIR"
 # echo "IMAGES_DIR=$IMAGES_DIR"
 # echo "RESOURCES_DIR=$RESOURCES_DIR"
@@ -45,7 +45,7 @@ output="env.yaml"
 echo "# Auto-generated from env.sh" > "$output"
 
 # Iterate over exported variables in this script
-for var in TASK_GRN_INFERENCE_DIR GRN_BENCHMARK_DIR PYTHONPATH RESULTS_DIR IMAGES_DIR RESOURCES_DIR INFERENCE_DIR EVALUATION_DIR PRIOR_DIR EXTENDED_DIR METHODS_DIR METRICS_DIR UTILS_DIR DOCS_IMAGES_DIR; do
+for var in TASK_GRN_INFERENCE_DIR geneRNBI_DIR PYTHONPATH RESULTS_DIR IMAGES_DIR RESOURCES_DIR INFERENCE_DIR EVALUATION_DIR PRIOR_DIR EXTENDED_DIR METHODS_DIR METRICS_DIR UTILS_DIR DOCS_IMAGES_DIR; do
     value="$(eval echo "\"\$$var\"")"
     echo "$var: \"$value\"" >> "$output"
 done

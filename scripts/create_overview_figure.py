@@ -20,7 +20,7 @@ from src.helper import load_env, surrogate_names, read_yaml
 
 env = load_env()
 TASK_GRN_INFERENCE_DIR = env['TASK_GRN_INFERENCE_DIR']
-GRN_BENCHMARK_DIR = env['GRN_BENCHMARK_DIR']
+GRN_BENCHMARK_DIR = env['geneRNBI_DIR']
 
 # Add task_grn_inference to path
 sys.path.insert(0, TASK_GRN_INFERENCE_DIR)
