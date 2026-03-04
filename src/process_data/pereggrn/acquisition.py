@@ -41,7 +41,7 @@ def get_dataset(par):
 
 def get_networks(par):
     print('Load networks ...')
-    os.makedirs(par['nets_dir'], exist_ok=True)
+    os.makedirs(par['grns_dir'], exist_ok=True)
 
     names = []
     for model in par['nets']:
@@ -53,7 +53,7 @@ def get_networks(par):
 
         net = process_links(net, par)
 
-        net.to_csv(f"{par['nets_dir']}/{name}.csv")
+        net.to_csv(f"{par['grns_dir']}/{name}.csv")
     
         
 if __name__ == '__main__':
@@ -78,7 +78,7 @@ if __name__ == '__main__':
                             'cellnet_human_Hg1332/networks/heart.parquet',
                             ],
         'raw_datasets_dir': f'{RESULT_DIR}/resources/datasets_raw/',
-        'nets_dir': f'{RESULT_DIR}/resources/grn_models/global/',
+        'grns_dir': f'{RESULT_DIR}/resources/grn_models/global/',
         'max_n_links': 50_000,
     }
     os.makedirs(f'{RESULT_DIR}/resources/grn_models/', exist_ok=True)
