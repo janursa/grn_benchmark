@@ -18,7 +18,7 @@ import warnings
 import os
 import warnings
 from scipy import stats
-from grn_benchmark.src.helper import load_env
+from geneRNBI.src.helper import load_env
 warnings.filterwarnings("ignore")
 
 env = load_env()

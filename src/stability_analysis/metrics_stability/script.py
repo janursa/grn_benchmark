@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import os
 
-from grn_benchmark.src.helper import load_env
+from geneRNBI.src.helper import load_env
 
 env = load_env()
 RESULTS_DIR = env['RESULTS_DIR']

@@ -27,7 +27,7 @@ from tqdm import tqdm
 import warnings
 warnings.filterwarnings("ignore")
 
-from grn_benchmark.src.helper import load_env
+from geneRNBI.src.helper import load_env
 
 # Parse command-line arguments
 parser = argparse.ArgumentParser(description='Run gene-wise ensemble GRN analysis')

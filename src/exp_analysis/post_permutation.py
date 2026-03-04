@@ -18,7 +18,7 @@ import warnings
 import os
 import warnings
 from scipy import stats
-from grn_benchmark.src.helper import load_env
+from geneRNBI.src.helper import load_env
 
 env = load_env()
 RESULTS_DIR = env['RESULTS_DIR']
