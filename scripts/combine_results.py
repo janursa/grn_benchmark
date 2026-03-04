@@ -55,15 +55,14 @@ def combine_results(local_run=False):
         # Copy all_scores.csv directly (local run mode)
         print("  Using local run mode - copying all_scores.csv...")
         scores_path = base_dir / 'all_scores.csv'
+        assert scores_path.exists(), f"Error: {scores_path} not found!"
         
-        if scores_path.exists():
-            print(f"  Copying scores from {scores_path}...")
-            import shutil
-            output_scores = save_dir / 'all_scores.csv'
-            shutil.copy(scores_path, output_scores)
-            print(f"  Saved combined scores to {output_scores}")
-        else:
-            print(f"  Warning: {scores_path} not found!")
+        print(f"  Copying scores from {scores_path}...")
+        import shutil
+        output_scores = save_dir / 'all_scores.csv'
+        shutil.copy(scores_path, output_scores)
+        print(f"  Saved combined scores to {output_scores}")
+        
     else:
         # Read from individual score_uns.yaml files (AWS mode)
         print("  Using AWS mode - reading from individual score_uns.yaml files...")

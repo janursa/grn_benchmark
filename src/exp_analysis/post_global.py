@@ -24,8 +24,7 @@ env = load_env()
 RESULTS_DIR = env['RESULTS_DIR']
 figs_dir = F"{env['RESULTS_DIR']}/figs"
 
-sys.path.append(env['GRN_BENCHMARK_DIR'])
-from src.helper import plot_heatmap, surrogate_names, custom_jointplot, palette_celltype, \
+from geneRNBI.src.helper import plot_heatmap, surrogate_names, custom_jointplot, palette_celltype, \
                        palette_methods, \
                        palette_datasets, colors_blind, linestyle_methods, palette_datasets, CONTROLS3, linestyle_methods, retrieve_grn_path, \
                         plot_raw_scores
@@ -35,8 +34,7 @@ parser.add_argument('--dataset', type=str, required=True, help='Dataset name')
 args = parser.parse_args()
 dataset = args.dataset
 
-sys.path.append(env['TASK_GRN_INFERENCE_DIR'])
-from src.utils.config import METRICS
+from task_grn_inference import METRICS
 metrics_all = pd.read_csv(f'{RESULTS_DIR}/experiment/global_grns/metrics_{dataset}.csv').fillna(0)
 metrics_all['model'] = metrics_all['model'].apply(lambda x: x.replace('.csv', ''))
 metrics_all['model'] = metrics_all['model'].apply(lambda x: ':'.join(x.split(':')[:2]) if ':' in x else x)
@@ -56,14 +54,17 @@ metrics_all['model'] = metrics_all['model'].apply(extract_tissue_name)
 metrics_all = metrics_all[[c for c in METRICS if c in metrics_all.columns] + ['model']]
 metrics_all = metrics_all[~metrics_all['model'].isin(['scenic', 'Scenic'])]
 
-from src.helper import plot_heatmap
-fig, ax = plt.subplots(1, 1, figsize=(.7*len(metrics_all.columns), 6), sharey=False)
+
+fig, ax = plt.subplots(1, 1, figsize=(.5*len(metrics_all.columns), 6), sharey=False)
 if 'model' in metrics_all.columns:
     metrics_all.set_index('model', inplace=True)
 metrics_all.index = metrics_all.index.map(lambda x: surrogate_names.get(x, x))
 metrics_all.columns = metrics_all.columns.map(lambda x: surrogate_names.get(x, x))
 plot_heatmap(metrics_all, name='', ax=ax, cmap="viridis")
-ax.set_ylabel('GRN models')
+ax.set_ylabel('')
+ax.xaxis.tick_bottom()
+ax.xaxis.set_label_position('bottom')
+ax.set_xticklabels(ax.get_xticklabels(), ha='right')
 file_name = f"{figs_dir}/global_models_{dataset}.png"
 print(file_name)
 fig.savefig(file_name, dpi=300, transparent=True, bbox_inches='tight')

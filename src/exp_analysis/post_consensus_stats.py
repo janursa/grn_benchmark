@@ -26,7 +26,7 @@ figs_dir = f"{env['RESULTS_DIR']}/figs/consensus_regulators"
 os.makedirs(figs_dir, exist_ok=True)
 
 
-sys.path.append(env['GRN_BENCHMARK_DIR'])
+sys.path.append(env['geneRNBI_DIR'])
 from src.helper import plot_heatmap, surrogate_names, custom_jointplot, palette_celltype, \
                        palette_methods, \
                        palette_datasets, colors_blind, linestyle_methods, palette_datasets, CONTROLS3, linestyle_methods, retrieve_grn_path, \
