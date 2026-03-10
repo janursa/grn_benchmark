@@ -203,7 +203,7 @@ def evaluate_all_datasets(datasets=None, metrics=None, cv_threshold=0.2, output_
     
     all_results = []
     if local_run:
-        scores_all = pd.read_csv(f"{TASK_GRN_INFERENCE_DIR}/resources/results/all_scores.csv")
+        scores_all = pd.read_csv(env.get('RESULTS_DIR', f"{TASK_GRN_INFERENCE_DIR}/resources/results") + "/all_scores.csv")
         scores_all = scores_all[METRICS + ['method', 'dataset']]
         scores_all.rename(columns={'method': 'model'}, inplace=True)
     

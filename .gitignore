@@ -24,3 +24,4 @@ draw/.*
 repo/
 logs/*
 
+temp/

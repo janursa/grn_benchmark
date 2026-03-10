@@ -31,6 +31,7 @@ def get_par(dataset):
         'evaluation_data_sc': f"{env['EXTENDED_DIR']}/{dataset}_train_sc.h5ad",
         'evaluation_data_de': f"{env['EXTENDED_DIR']}/{dataset}_de.h5ad",
         'tf_all': f"{env['PRIOR_DIR']}/tf_all.csv",
+        'ceg': f"{env['PRIOR_DIR']}/ceg_v2.txt",
         'apply_skeleton': False,
         'apply_tf': True,
         'max_n_links': 50000,

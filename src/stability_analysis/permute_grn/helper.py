@@ -52,7 +52,7 @@ def impute_fun(par):
     raise ValueError(f'Wrong type ({type}) for adding noise')
   
   prediction = prediction.astype(str)
-  net = ad.AnnData(X=None, uns={"method_id": net.uns['method_id'], "dataset_id": net.uns['dataset_id'], "prediction": prediction[["source", "target", "weight"]]})
+  net = ad.AnnData(X=None, uns={"method_id": net.uns.get('method_id', ''), "dataset_id": net.uns.get('dataset_id', ''), "prediction": prediction[["source", "target", "weight"]]})
   net.write(par['prediction_n'])
 
 

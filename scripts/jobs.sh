@@ -1,6 +1,8 @@
 sbatch scripts/experiment_normalization.sh op
 sbatch scripts/experiment_permutation.sh op
 sbatch scripts/experiment_permutation.sh replogle
+sbatch scripts/experiment_causal_directionality.sh op
+sbatch scripts/experiment_causal_directionality.sh replogle
 sbatch scripts/experiment_global_grns.sh
 
 

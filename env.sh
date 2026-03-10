@@ -1,8 +1,10 @@
 # env.sh
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
     base_dir="/home/jnourisa/projs/ongoing"
+    resources_dir="/vol/projects/jnourisa/genernbi/resources"
 else
     base_dir="/Users/jno24/Documents/projs/ongoing"
+    resources_dir="${base_dir}/task_grn_inference/resources"
 
 fi
 
@@ -14,9 +16,9 @@ export DOCS_IMAGES_DIR="${DOCS_SOURCE_DIR}/images"
 
 export PYTHONPATH="$geneRNBI_DIR:${PYTHONPATH:-}"
 
-export RESULTS_DIR="${TASK_GRN_INFERENCE_DIR}/resources/results"
+export RESOURCES_DIR="${resources_dir}"
+export RESULTS_DIR="${RESOURCES_DIR}/results"
 export IMAGES_DIR="/home/jnourisa/projs/images"
-export RESOURCES_DIR="${TASK_GRN_INFERENCE_DIR}/resources"
 export INFERENCE_DIR="${RESOURCES_DIR}/grn_benchmark/inference_data"
 export EVALUATION_DIR="${RESOURCES_DIR}/grn_benchmark/evaluation_data"
 export PRIOR_DIR="${RESOURCES_DIR}/grn_benchmark/prior"

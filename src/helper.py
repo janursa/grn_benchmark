@@ -17,7 +17,7 @@ import io
 import itertools
 import os
 
-from task_grn_inference.src.utils.config import DATASETS, METHODS, surrogate_names
+from task_grn_inference.src.utils.config import DATASETS, METHODS, METRICS, surrogate_names
 
 
 
@@ -94,6 +94,10 @@ if False:
 
 palette_datasets = {key: color for key, color in zip(DATASETS, sns.color_palette("deep", len(DATASETS)))}
 palette_methods = {key:color for key, color in zip(SELECTED_MODELS, sns.color_palette('Set2', len(SELECTED_MODELS)))}
+# Stable metric display-name → color dict (colors_blind for ≤7; tab20 pairs beyond that)
+_extra_metric_colors = sns.color_palette('tab20', 20)[14:]  # distinct colors not in colors_blind
+_metric_color_list = colors_blind + list(_extra_metric_colors)
+palette_metrics = {surrogate_names.get(m, m): _metric_color_list[i] for i, m in enumerate(METRICS)}
 
 palette_celltype = ['#c4d9b3', '#c5bc8e', '#c49e81', '#c17d88', 'gray', 'lightsteelblue']
 
@@ -662,7 +666,7 @@ def read_yaml(file_path):
 def plot_raw_scores(scores_mat, ax):
     scores_mat = scores_mat.dropna(how='all', axis=1)
     
-    available_methods = [method for method in METHODS if method in scores_mat.index]
+    available_methods = list(dict.fromkeys(method for method in METHODS if method in scores_mat.index))
     scores_mat = scores_mat.loc[available_methods]
     scores_mat.index = scores_mat.index.map(lambda name: surrogate_names.get(name, name))
     scores_mat.columns = scores_mat.columns.map(lambda name: surrogate_names.get(name, name))
