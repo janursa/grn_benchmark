@@ -17,6 +17,8 @@ sys.path.insert(0, env['geneRNBI_DIR'])
 from src.stability_analysis.permute_grn.helper import main as main_permute
 parser = argparse.ArgumentParser()
 parser.add_argument('--dataset', type=str)
+parser.add_argument('--methods', nargs='+', default=None,
+                    help='Subset of methods to run (default: all)')
 
 args = parser.parse_args()
 
@@ -27,10 +29,11 @@ par = {
   **{
   'grns_dir': f"{env['RESULTS_DIR']}/{args.dataset}/",
   'write_dir': f"{env['RESULTS_DIR']}/experiment/permute_grn/",
-  'degrees': [0, 10, 20, 50, 100], #[0, 10, 20, 50, 100],
-  'analysis_types': ["net"], #['direction', 'weight', "net", "sign"]
-  'methods': ['negative_control', 'positive_control', 'ppcor', 'grnboost', 'pearson_corr', 'portia', 'scenicplus', 'scprint'],
-  # 'methods': ['grnboost',  'pearson_corr', 'scenicplus'],
+  'degrees': [0, 10, 20, 50, 100],
+  'analysis_types': ["net", "sign", "weight"],
+  'methods': args.methods if args.methods else [
+      'negative_control', 'positive_control', 'ppcor', 'grnboost', 'pearson_corr', 'portia',
+      'scenicplus', 'scprint', 'scenic', 'geneformer', 'scgpt', 'celloracle', 'figr', 'granie', 'scglue'],
   'dataset': args.dataset
 }
 }

@@ -26,7 +26,7 @@ figs_dir = F"{env['RESULTS_DIR']}/figs"
 
 sys.path.append(env['geneRNBI_DIR'])
 from src.helper import plot_heatmap, surrogate_names, custom_jointplot, palette_celltype, \
-                       palette_methods, \
+                       palette_methods, palette_metrics, \
                        palette_datasets, colors_blind, linestyle_methods, palette_datasets, CONTROLS3, linestyle_methods, retrieve_grn_path, \
                         plot_raw_scores
 
@@ -253,7 +253,7 @@ def plot_metrics_as_axes(metrics, dataset, save_tag='_all', use_raw_scores=False
     else:
         ylabel = "Performance (%)"
     # permute_types = ['TF-gene link', 'TF-gene sign', 'TF-gene direction', 'TF-gene weight']
-    permute_types = ['TF-gene link']
+    permute_types = ['TF-gene link', 'TF-gene sign', 'TF-gene weight', 'TF-gene direction']
     
     # Helper function to normalize data with min-max scaling to 0-100
     def normalize_minmax(df_all, col):
@@ -361,3 +361,197 @@ def plot_metrics_as_axes(metrics, dataset, save_tag='_all', use_raw_scores=False
         print(f"Saving figure to: {fig_name}")
         fig.savefig(fig_name, 
                    dpi=200, transparent=True, bbox_inches='tight')
+
+
+# ── Run for completed datasets ────────────────────────────────────────────────
+from task_grn_inference.src.utils.config import DATASETS_METRICS, METRICS as ALL_METRIC_COLS
+
+# Map module-level metric names → actual CSV column names
+MODULE_TO_COLS = {
+    'regression':            ['r_precision', 'r_recall'],
+    'ws_distance':           ['ws_precision', 'ws_recall'],
+    'tf_recovery':           ['t_rec_precision', 't_rec_recall'],
+    'tf_binding':            ['tfb_f1'],
+    'sem':                   ['sem'],
+    'vc':                    ['vc'],
+    'gs_recovery':           ['gs_f1'],
+    'replicate_consistency': ['replicate_consistency'],
+}
+
+def dataset_metric_cols(dataset):
+    """Return CSV column names relevant for this dataset."""
+    cols = []
+    for m in DATASETS_METRICS.get(dataset, []):
+        cols.extend(MODULE_TO_COLS.get(m, []))
+    return [c for c in cols if c in ALL_METRIC_COLS]
+
+# datasets with at least net + sign + weight complete
+DATASETS_TO_RUN = ['op', 'replogle', 'parsebioscience', 'norman', 'ibd_cd', 'ibd_uc']
+
+for ds in DATASETS_TO_RUN:
+    metrics = dataset_metric_cols(ds)
+    print(f"\n=== {ds}: {metrics} ===")
+    plot_metrics_as_axes(metrics=metrics, dataset=ds, save_tag='all', use_raw_scores=True)
+
+
+# ── Which metric modules are relevant per permutation type ───────────────────
+PERMUTATION_METRIC_MAP = {
+    'net':    ['regression', 'ws_distance', 'sem', 'tf_recovery', 'tf_binding', 'vc', 'gs_recovery'],
+    'weight': ['regression', 'ws_distance', 'tf_recovery', 'tf_binding', 'gs_recovery'],
+}
+
+ALL_DATASETS_PERM = [
+    'op', 'replogle', 'parsebioscience', 'norman',
+    'ibd_cd', 'ibd_uc', '300BCG', 'nakatake', 'xaira_HCT116', 'xaira_HEK293T',
+]
+
+PERM_DIR = f"{RESULTS_DIR}/experiment/permute_grn"
+
+
+def _load_ratio_df(ptype):
+    """For each (dataset, method, metric), return whether score@100 < score@0 (degraded=True)."""
+    rel_cols = []
+    for m in PERMUTATION_METRIC_MAP.get(ptype, []):
+        rel_cols.extend(MODULE_TO_COLS.get(m, []))
+
+    rows = []
+    for ds in ALL_DATASETS_PERM:
+        f0   = f"{PERM_DIR}/{ds}-{ptype}-0-scores.csv"
+        f100 = f"{PERM_DIR}/{ds}-{ptype}-100-scores.csv"
+        if not os.path.exists(f0) or not os.path.exists(f100):
+            continue
+        df0   = pd.read_csv(f0,   index_col=0)
+        df100 = pd.read_csv(f100, index_col=0)
+        avail = [c for c in rel_cols if c in df0.columns and c in df100.columns]
+        for method in df0.index.intersection(df100.index):
+            for col in avail:
+                v0, v100 = df0.loc[method, col], df100.loc[method, col]
+                if pd.notna(v0) and pd.notna(v100):
+                    rows.append({'dataset': ds, 'method': method, 'metric': col,
+                                 'degraded': float(v100 < v0)})
+    return pd.DataFrame(rows)
+
+
+def _sensitivity_bar(ptype, out_path):
+    """Horizontal bar: fraction of (dataset x method) pairs where 100% permutation
+    degrades the metric, shown per metric. Annotated with n_degraded/n_total.
+    """
+    df = _load_ratio_df(ptype)
+    if df.empty:
+        print(f"No data for ptype={ptype}")
+        return
+
+    df['metric_name'] = df['metric'].map(lambda x: surrogate_names.get(x, x))
+    grp   = df.groupby('metric_name')['degraded']
+    stats = grp.agg(frac='mean', n='count')
+
+    # order by sensitivity descending (most degraded first)
+    stats = stats.sort_values('frac', ascending=False)
+
+    colors = [palette_metrics.get(m, '#aab4be') for m in stats.index]
+
+    n_items = len(stats)
+    fig, ax = plt.subplots(figsize=(3, 0.20 * n_items + 0.5))
+    bars = ax.barh(stats.index, stats['frac'].values, color=colors,
+                   edgecolor='white', height=0.65)
+
+    # annotate with n_degraded / n_total
+    for bar, (name, row) in zip(bars, stats.iterrows()):
+        n_deg = int(round(row['frac'] * row['n']))
+        ax.text(bar.get_width() + 0.01, bar.get_y() + bar.get_height() / 2,
+                f"{n_deg}/{int(row['n'])}", va='center', ha='left', fontsize=8)
+
+    ax.axvline(x=0.5, color='black', linestyle='--', linewidth=1, alpha=0.7)
+    ax.set_xlim(0, 1.22)
+    ax.set_xlabel('Sensitivity')
+    ax.set_ylabel('')
+    ax.invert_yaxis()
+    for side in ['right', 'top']:
+        ax.spines[side].set_visible(False)
+    plt.tight_layout()
+    fig.savefig(out_path, dpi=300, transparent=True, bbox_inches='tight')
+    plt.close(fig)
+    print(f"Saved: {out_path}", flush=True)
+
+
+def _subset_degree_plot(dataset, methods_list, ptype, out_path):
+    """Line plot: raw scores vs permutation degree for a subset of methods.
+
+    One subplot per relevant metric. Used for OP and Replogle detailed views.
+    """
+    rel_cols = []
+    for m in PERMUTATION_METRIC_MAP.get(ptype, []):
+        rel_cols.extend(MODULE_TO_COLS.get(m, []))
+    ds_cols  = dataset_metric_cols(dataset)
+    cols     = [c for c in rel_cols if c in ds_cols]
+    if not cols:
+        print(f"No relevant metrics for {dataset}/{ptype}")
+        return
+
+    degrees = [0, 10, 20, 50, 100]
+    # data[col][method][degree] = value
+    data = {col: {m: {} for m in methods_list} for col in cols}
+    for deg in degrees:
+        fpath = f"{PERM_DIR}/{dataset}-{ptype}-{deg}-scores.csv"
+        if not os.path.exists(fpath):
+            continue
+        df = pd.read_csv(fpath, index_col=0)
+        for col in cols:
+            if col not in df.columns:
+                continue
+            for m in methods_list:
+                if m in df.index:
+                    data[col][m][deg] = df.loc[m, col]
+
+    # convert to DataFrames, drop empty cols
+    col_dfs = {}
+    for col in cols:
+        method_data = {m: data[col][m] for m in methods_list if data[col][m]}
+        if method_data:
+            col_dfs[col] = pd.DataFrame(method_data, index=degrees)
+
+    if not col_dfs:
+        print(f"No data for {dataset}/{ptype}")
+        return
+
+    n = len(col_dfs)
+    fig, axes = plt.subplots(1, n, figsize=(2.2 * n + 0.5, 2.5), sharey=False)
+    if n == 1:
+        axes = [axes]
+
+    for idx, (col, df_col) in enumerate(col_dfs.items()):
+        ax = axes[idx]
+        for method in df_col.columns:
+            m_name = surrogate_names.get(method, method)
+            color  = palette_methods.get(m_name, '#aab4be')
+            ax.plot(df_col.index, df_col[method].values,
+                    marker='o', label=m_name, color=color, linewidth=1.5)
+
+        ax.set_title(surrogate_names.get(col, col), fontsize=9)
+        ax.set_xlabel('Permutation (%)')
+        ax.set_ylabel('Score' if idx == 0 else '')
+        ax.set_xticks([0, 20, 50, 100])
+        for side in ['right', 'top']:
+            ax.spines[side].set_visible(False)
+        if idx == n - 1:
+            ax.legend(loc=(1.05, 0.1), frameon=False, fontsize=7)
+
+    plt.tight_layout()
+    fig.savefig(out_path, dpi=300, transparent=True, bbox_inches='tight')
+    plt.close(fig)
+    print(f"Saved: {out_path}", flush=True)
+
+
+# ── Sensitivity summary bars (all datasets × methods aggregated) ─────────────
+_sensitivity_bar('net',    f"{figs_dir}/permutation_sensitivity_net.png")
+_sensitivity_bar('weight', f"{figs_dir}/permutation_sensitivity_weight.png")
+
+# ── Subset degree plots for OP and Replogle ───────────────────────────────────
+_OP_METHODS       = ['scenicplus', 'celloracle', 'grnboost', 'pearson_corr', 'ppcor']
+_REPLOGLE_METHODS = ['scenic', 'grnboost', 'pearson_corr', 'ppcor', 'scprint']
+
+for _ptype in ['net', 'weight']:
+    _subset_degree_plot('op', _OP_METHODS, _ptype,
+                        f"{figs_dir}/permutation_subset_op_{_ptype}.png")
+    _subset_degree_plot('replogle', _REPLOGLE_METHODS, _ptype,
+                        f"{figs_dir}/permutation_subset_replogle_{_ptype}.png")

@@ -18,7 +18,7 @@ if [ -z "$dataset" ]; then
     exit 1
 fi
 
-inference_methods=("portia" "pearson_corr" "grnboost" "scenic" "ppcor") # ( "pearson_corr" "grnboost" "scenic" )
+inference_methods=("pearson_corr" "grnboost" "scenic" "ppcor")
 layer='pearson_residual'
 run_grn_inference=false
 run_metrics=true

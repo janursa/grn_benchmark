@@ -7,6 +7,16 @@ import anndata as ad
 
 from util import naming_convention, process_links
 
+# Metric functions relevant per permutation type.
+# net / direction: full topology changes → all metrics affected.
+# sign / weight:   only affect edge ranking, not expression magnitude or TF identity
+#                  → sem and vc are not meaningfully affected.
+PERMUTATION_METRIC_MAP = {
+    'net':       ['regression', 'ws_distance', 'sem', 'tf_recovery', 'tf_binding', 'vc', 'gs_recovery'],
+    'sign':      [],
+    'weight':    ['regression', 'ws_distance', 'tf_recovery', 'tf_binding', 'gs_recovery'],
+}
+
 def impute_fun(par):
   net = ad.read_h5ad(par['prediction'])
   prediction = pd.DataFrame(net.uns['prediction'])
@@ -56,14 +66,46 @@ def impute_fun(par):
   net.write(par['prediction_n'])
 
 
-def main_metrics(par):
-    from all_metrics.helper import main as main_metrics
-    # from sem.helper import main as main_sem
-    # from rc.helper import main as main_rc
-    # from replicate_consistency.helper import main as main_replicate_consistency
-    # rr = main_replicate_consistency(par)
-    rr = main_metrics(par)
-    return rr
+def main_metrics(par, noise_type):
+    from regression.helper import main as regression
+    from ws_distance.helper import main as ws_distance
+    from sem.helper import main as sem
+    from tf_recovery.helper import main as tf_recovery
+    from tf_binding.helper import main as tf_binding
+    from vc.helper import main as vc
+    from gs_recovery.helper import main as gs_recovery
+    from config import DATASETS_METRICS
+
+    METRIC_FUNCTIONS = {
+        'regression': regression,
+        'ws_distance': ws_distance,
+        'sem': sem,
+        'tf_recovery': tf_recovery,
+        'tf_binding': tf_binding,
+        'vc': vc,
+        'gs_recovery': gs_recovery,
+    }
+
+    dataset_id = ad.read_h5ad(par['evaluation_data'], backed='r').uns['dataset_id']
+    dataset_metrics  = set(DATASETS_METRICS.get(dataset_id, []))
+    relevant_metrics = set(PERMUTATION_METRIC_MAP[noise_type])
+    metrics_to_run   = dataset_metrics & relevant_metrics
+    print(f"  [{noise_type}] metrics to run: {metrics_to_run}", flush=True)
+
+    rr_store = []
+    for metric_name in metrics_to_run:
+        metric_func = METRIC_FUNCTIONS.get(metric_name)
+        if metric_func is None:
+            print(f"  Warning: no function for '{metric_name}'")
+            continue
+        rr = metric_func(par)
+        if rr is None:
+            raise ValueError(f"Metric '{metric_name}' returned None")
+        if len(rr) > 1:
+            rr = rr[1]
+        rr_store.append(rr)
+
+    return pd.concat(rr_store, axis=1)
 
 def main(par):
   os.makedirs(par['write_dir'], exist_ok=True)
@@ -71,6 +113,10 @@ def main(par):
   #------ noise types and degrees ------#
   for noise_type in par['analysis_types']: # run for each noise type (net, sign, weight)
     for degree in par['degrees']: # run for each degree
+      out_path = f"{par['write_dir']}/{par['dataset']}-{noise_type}-{degree}-scores.csv"
+      if os.path.exists(out_path):
+        print(f"Skipping existing: {out_path}", flush=True)
+        continue
       df_all = None
       for i, method in enumerate(par['methods']): # run for each method
         par['prediction'] = f"{par['grns_dir']}/{naming_convention(par['dataset'], method)}"
@@ -84,7 +130,7 @@ def main(par):
         impute_fun(par)
         # run regs 
         par['prediction'] = par['prediction_n']
-        score = main_metrics(par)
+        score = main_metrics(par, noise_type)
         score.index = [method]
         if df_all is None:
           df_all = score
@@ -92,4 +138,4 @@ def main(par):
           df_all = pd.concat([df_all, score])
         print(noise_type, degree, df_all)
       if df_all is not None:
-        df_all.to_csv(f"{par['write_dir']}/{par['dataset']}-{noise_type}-{degree}-scores.csv")
+        df_all.to_csv(out_path)

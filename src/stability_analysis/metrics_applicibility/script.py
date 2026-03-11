@@ -603,6 +603,129 @@ def evaluate_all_datasets(datasets=None, metrics=None, cv_threshold=0.2, output_
     return results_df
 
 
+def plot_metric_applicability():
+    """Plot a heatmap of metric applicability per dataset from config (DATASETS_METRICS)."""
+    import matplotlib.pyplot as plt
+    import matplotlib.patches as mpatches
+
+    # Map config categories → individual METRICS
+    category_to_metrics = {
+        'regression':           ['r_precision', 'r_recall'],
+        'ws_distance':          ['ws_precision', 'ws_recall'],
+        'tf_recovery':          ['t_rec_precision', 't_rec_recall'],
+        'tf_binding':           ['tfb_f1'],
+        'sem':                  ['sem'],
+        'gs_recovery':          ['gs_f1'],
+        'vc':                   ['vc'],
+        'replicate_consistency':['replicate_consistency'],
+    }
+
+    # Build binary applicability matrix (metrics × datasets)
+    dataset_order = ['op', 'parsebioscience', '300BCG', 'ibd_uc', 'ibd_cd',
+                     'replogle', 'xaira_HEK293T', 'xaira_HCT116', 'nakatake', 'norman']
+    metric_order = METRICS  # as defined in config
+
+    from task_grn_inference.src.utils.config import DATASETS_METRICS
+    applicable = pd.DataFrame(False, index=metric_order, columns=dataset_order)
+    for dataset, categories in DATASETS_METRICS.items():
+        if dataset not in dataset_order:
+            continue
+        for cat in categories:
+            for m in category_to_metrics.get(cat, []):
+                if m in applicable.index:
+                    applicable.loc[m, dataset] = True
+
+    # Sort metrics by descending applicability count
+    applicable = applicable.loc[applicable.sum(axis=1).sort_values(ascending=True).index]
+
+    # Display names
+    applicable.index   = [surrogate_names.get(m, m) for m in applicable.index]
+    applicable.columns = [surrogate_names.get(d, d) for d in applicable.columns]
+
+    # Load empirically-passed metrics from metrics_kept_per_dataset.yaml
+    results_dir = env.get('RESULTS_DIR', str(Path(TASK_GRN_INFERENCE_DIR) / 'resources' / 'results'))
+    metrics_kept_file = Path(results_dir) / 'metrics_kept_per_dataset.yaml'
+    empirical = pd.DataFrame(False, index=metric_order, columns=dataset_order)
+    if metrics_kept_file.exists():
+        with open(metrics_kept_file) as f:
+            metrics_kept = yaml.safe_load(f)
+        for dataset, mlist in metrics_kept.items():
+            if dataset not in dataset_order:
+                continue
+            for m in mlist:
+                if m in empirical.index:
+                    empirical.loc[m, dataset] = True
+
+    # Apply same metric sort order as applicable
+    empirical = empirical.loc[applicable.index.map(
+        {v: k for k, v in {m: surrogate_names.get(m, m) for m in metric_order}.items()}
+    )]
+    empirical.index   = applicable.index
+    empirical.columns = applicable.columns
+
+    n_metrics, n_datasets = applicable.shape
+    cell = 0.15
+    left_margin = 1.1
+    fig_w = n_datasets * cell + left_margin + 0.1
+    fig_h = n_metrics * cell + 0.4
+    fig, ax = plt.subplots(figsize=(fig_w, fig_h))
+
+    ax.set_xlim(-0.5, n_datasets - 0.5)
+    ax.set_ylim(-0.5, n_metrics - 0.5)
+    ax.set_facecolor('#f8f8f8')
+
+    # Grid lines
+    for x in range(n_datasets):
+        ax.axvline(x - 0.5, color='white', linewidth=1.2)
+    for y in range(n_metrics):
+        ax.axhline(y - 0.5, color='white', linewidth=1.2)
+
+    # Fill cells: green checkmark (config applicable) + red star (empirically passed)
+    for yi, metric in enumerate(applicable.index):
+        for xi, dataset in enumerate(applicable.columns):
+            val = applicable.loc[metric, dataset]
+            passed = empirical.loc[metric, dataset]
+            color = '#d4edda' if val else '#efefef'
+            ax.add_patch(mpatches.FancyBboxPatch(
+                (xi - 0.44, yi - 0.41), 0.88, 0.82,
+                boxstyle='round,pad=0.04', facecolor=color, edgecolor='white', linewidth=0.5
+            ))
+            if val and not passed:
+                ax.text(xi, yi, '✓', ha='center', va='center',
+                        fontsize=5, color='#2e7d32', fontweight='bold')
+            elif val and passed:
+                ax.text(xi - 0.18, yi, '✓', ha='center', va='center',
+                        fontsize=5, color='#2e7d32', fontweight='bold')
+                ax.text(xi + 0.18, yi, '★', ha='center', va='center',
+                        fontsize=4, color='#c0392b', fontweight='bold')
+            elif passed:
+                ax.text(xi, yi, '★', ha='center', va='center',
+                        fontsize=4, color='#c0392b', fontweight='bold')
+
+    ax.set_xticks(range(n_datasets))
+    ax.set_xticklabels(applicable.columns, rotation=35, ha='left', fontsize=5)
+    ax.set_yticks(range(n_metrics))
+    ax.set_yticklabels(applicable.index, fontsize=5, ha='right')
+    ax.xaxis.set_ticks_position('top')
+    ax.xaxis.set_label_position('top')
+    ax.tick_params(axis='both', length=0, pad=1)
+    ax.set_xlabel('Dataset', fontsize=6, labelpad=4)
+    ax.set_ylabel('Metric', fontsize=6, labelpad=4)
+
+    # Fix left margin so long y labels don't get clipped
+    fig.subplots_adjust(left=left_margin / fig_w)
+    plt.tight_layout()
+
+    out = Path(results_dir) / 'metric_applicability.png'
+    plt.savefig(out, dpi=400, bbox_inches='tight', facecolor='white')
+    print(f"Applicability plot saved to: {out}")
+
+    docs_out = DOCS_IMAGES_DIR / 'metric_applicability.png'
+    plt.savefig(docs_out, dpi=400, bbox_inches='tight', facecolor='white')
+    print(f"Also saved to: {docs_out}")
+    plt.close()
+
+
 def main():
     # Set default output path if not specified
     if args.output is None:
@@ -616,7 +739,9 @@ def main():
         cv_threshold=args.cv_threshold,
         output_file=args.output
     )
-    
+
+    plot_metric_applicability()
+
     return results
 
 

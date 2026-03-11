@@ -22,8 +22,9 @@ env = load_env()
 TASK_GRN_INFERENCE_DIR = env['TASK_GRN_INFERENCE_DIR']
 GRN_BENCHMARK_DIR = env['geneRNBI_DIR']
 
-# Add task_grn_inference to path
+# Add task_grn_inference to path; clear cached src so it re-resolves to task_grn_inference's src
 sys.path.insert(0, TASK_GRN_INFERENCE_DIR)
+sys.modules.pop('src', None)
 from src.utils.config import DATASETS, METHODS, METRICS, FINAL_METRICS
 
 
@@ -193,14 +194,14 @@ def process_trace_to_csv(trace_file):
 def main(local_run=False, methods=None, datasets=None):
     
     # Get paths from environment
-    results_folder = f'{TASK_GRN_INFERENCE_DIR}/resources/results'
+    results_folder = env['RESULTS_DIR']
     
     combined_dir = Path(results_folder) / 'all_new'
     trace_file = combined_dir / 'trace.csv'
     
     # Choose score file based on mode
     if local_run:
-        score_file = combined_dir / 'all_scores.csv'
+        score_file = Path(results_folder) / 'all_scores.csv'
     else:
         score_file = combined_dir / 'score_uns.yaml'
     
@@ -240,7 +241,7 @@ def main(local_run=False, methods=None, datasets=None):
     
     # Step 2.5: Load metrics that passed criteria from metrics_applicibility
     print("\n2.5. Loading metrics that passed applicability criteria...")
-    metrics_kept_file = Path(f'{TASK_GRN_INFERENCE_DIR}/resources/results/experiment/metrics_kept_per_dataset.yaml')
+    metrics_kept_file = Path(results_folder) / 'metrics_kept_per_dataset.yaml'
     
     if not metrics_kept_file.exists():
         raise FileNotFoundError(f"Metrics kept file not found: {metrics_kept_file}")
@@ -374,7 +375,7 @@ def main(local_run=False, methods=None, datasets=None):
     
     # Average only FINAL_METRICS and dataset scores for overall ranking
     ranking_cols = final_metrics_cols + dataset_cols
-    df_scores['overall_score'] = df_scores[ranking_cols].mean(axis=1, skipna=True)
+    df_scores['overall_score'] = df_scores[ranking_cols].median(axis=1, skipna=True)
     
     print(f"   Overall scores calculated using only FINAL_METRICS ({len(final_metrics_cols)} metrics) + datasets ({len(dataset_cols)} datasets)")
     

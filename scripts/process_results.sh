@@ -18,7 +18,7 @@ set -euo pipefail
 RUN_EVALUATION=false
 AGGREGATE_SCORES=false
 PLOT_RAW_SCORES=false
-PLOT_OVERVIEW=false
+PLOT_OVERVIEW=true
 
 while [[ $# -gt 0 ]]; do
     case "$1" in

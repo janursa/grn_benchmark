@@ -27,7 +27,7 @@ figs_dir = f"{env['RESULTS_DIR']}/figs/consensus_regulators"
 os.makedirs(figs_dir, exist_ok=True)
 
 
-sys.path.append(env['geneRNBI_DIR'])
+sys.path.insert(0, env['geneRNBI_DIR'])
 from src.helper import plot_heatmap, surrogate_names, custom_jointplot, palette_celltype, \
                        palette_methods, \
                        palette_datasets, colors_blind, linestyle_methods, palette_datasets, CONTROLS3, linestyle_methods, retrieve_grn_path, \
@@ -35,7 +35,7 @@ from src.helper import plot_heatmap, surrogate_names, custom_jointplot, palette_
 
 TASK_GRN_INFERENCE_DIR = env['TASK_GRN_INFERENCE_DIR']
 sys.path.append(TASK_GRN_INFERENCE_DIR)
-from src.utils.config import DATASETS_METRICS, DATASETS_CELLTYPES, DATASETS, FINAL_METRICS, METRICS, METHODS
+from task_grn_inference.src.utils.config import DATASETS_METRICS, DATASETS_CELLTYPES, DATASETS, FINAL_METRICS, METRICS, METHODS
 
 import argparse
 parser = argparse.ArgumentParser()
@@ -63,6 +63,8 @@ def map_normalizaton_method(pred_str):
 output["method"] = output["prediction"].apply(map_method)
 output["normalization"] = output["prediction"].apply(map_normalizaton_method)
 output.drop('prediction', axis=1, inplace=True)
+
+output = output[output["method"] != "portia"]
 
 cols = ['method', 'normalization'] + METRICS
 output = output[[c for c in cols if c in output.columns]]
