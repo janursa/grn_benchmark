@@ -13,11 +13,11 @@
 set -euo pipefail
 
 dataset=$1
-imputation_methods=("original" "knn" "magic") #"original" "knn" "magic"
-inference_methods=('pearson_corr') #'grnboost' 'pearson_corr'
-run_imputation=false
-run_grn_inference=false
-run_metrics=true
+run_imputation=${2:-false}
+run_grn_inference=${3:-false}
+run_metrics=${4:-false}
+imputation_methods=("original" "knn" "magic")
+inference_methods=('pearson_corr')
 
 source env.sh
 output_dir="${RESULTS_DIR}/experiment/imputation"
@@ -48,7 +48,7 @@ if [ "$run_grn_inference" = true ]; then
 
             script_file="src/methods/${inference_method}/run_local.sh"
         
-            cd $TASK_GRN_INFERENCE_DIR && sbatch "$script_file" \
+            cd $TASK_GRN_INFERENCE_DIR && bash "$script_file" \
                 --rna "$rna_file" \
                 --prediction "$prediction_file" 
 

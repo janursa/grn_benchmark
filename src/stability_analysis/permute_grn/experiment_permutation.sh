@@ -14,9 +14,9 @@ set -e
 
 dataset=$1
 if [ -z "$dataset" ]; then
-    echo "Usage: $0 <dataset> [method1 method2 ...]"
+    echo "Usage: $0 <dataset> [--analysis_types type1 type2 ...]"
     exit 1
 fi
 shift
 source env.sh
-python src/stability_analysis/permute_grn/script.py --dataset $dataset ${@:+--methods "$@"}
+python src/stability_analysis/permute_grn/script.py --dataset $dataset "$@"

@@ -30,7 +30,7 @@ summary_all <- read_tsv(file_path)
 
 # Add the new column for method types
 # Using exact surrogate names from Python config:
-# FINAL_METRICS: r_precision, r_recall, vc, sem, ws_precision, ws_recall, t_rec_precision, t_rec_recall, replicate_consistency, tfb_f1, gs_f1
+# METRICS: r_precision, r_recall, vc, sem, ws_precision, ws_recall, t_rec_precision, t_rec_recall, replicate_consistency, tfb_f1, gs_f1
 # Their surrogate names: R (precision), R (recall), Virtual cell, SEM, WS (precision), WS (recall), TF recovery (precision), TF recovery (recall), Replica consistency, TF binding, Gene sets
 column_info <- bind_rows(
   tribble(
@@ -38,7 +38,7 @@ column_info <- bind_rows(
     "method_name", NA_character_, "Name", "method", "text", NA_character_, list(width = 6, hjust = 0),
     "method_type", NA_character_, "Modality", "method", "text", NA_character_, list(width = 2, hjust = 0),
     "overall_score", "overall_score", "Score", "overall", "bar", "overall", list(width = 4),
-    # FINAL_METRICS with surrogate names
+    # METRICS with surrogate names
     "Regression (precision)", "Regression (precision)", "Regression (precision)", "metric_1", "funkyrect",  "metric_1", list(width = 1.5),
     "Regression (recall)", "Regression (recall)", "Regression (recall)", "metric_1", "funkyrect",  "metric_1", list(width = 1.5),
     "Virtual cell", "Virtual cell", "Virtual cell", "metric_1", "funkyrect",  "metric_1", list(width = 1.5),

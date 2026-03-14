@@ -26,12 +26,43 @@ meta = {
 sys.path.append(meta["resources_dir"])
 sys.path.append(meta["util_dir"])
 sys.path.append(meta["metrics_dir"])
+# Pre-inject method helper dirs so their try/except sys.path appends find the right modules
+sys.path.append(f'{TASK_GRN_INFERENCE_DIR}/src/methods/portia')
 
-from methods.pearson_corr.script import main as main_inference
+from methods.pearson_corr.script import main as main_pearson_corr
+from methods.portia.script import main as main_portia
 from all_metrics.helper import main as main_metrics
 # from metrics.ws_distance.consensus.helper import main as main_consensus_ws_distance
 from process_data.helper_data import sum_by
 from src.params import get_par
+
+SCENIC_IMAGE = '/home/jnourisa/projs/images/scenic'
+
+def main_grnboost(par):
+    """Run grnboost via singularity (pyscenic grn), matching the standard pipeline."""
+    import subprocess
+    cmd = [
+        'singularity', 'exec',
+        '--bind', '/home,/vol',
+        '--pwd', f'{TASK_GRN_INFERENCE_DIR}',
+        SCENIC_IMAGE,
+        'python', 'src/methods/grnboost/script.py',
+        '--rna', par['rna'],
+        '--prediction', par['prediction'],
+        '--tf_all', par['tf_all'],
+        '--temp_dir', par['temp_dir'],
+        '--num_workers', str(par.get('num_workers', 20)),
+    ]
+    print(f'  Running grnboost via singularity...', flush=True)
+    result = subprocess.run(cmd, check=True, text=True)
+    print(result.stdout or '', flush=True)
+
+METHODS = {
+    'pearson_corr': main_pearson_corr,
+    'portia': main_portia,
+    'grnboost': main_grnboost,
+}
+GRNBOOST_DEGREES = [-1.0, 9.0, 19.0]  # single cell, middle, max granularity
 
 # def def_par(dataset):
 #     par = {
@@ -50,8 +81,8 @@ from src.params import get_par
 
 #     }
 #     return par
-def prediction_file_name(dataset, granularity):
-    return f'{results_dir}/{dataset}.prediction_{granularity}.h5ad'
+def prediction_file_name(dataset, granularity, method='pearson_corr'):
+    return f'{results_dir}/{dataset}.{method}.prediction_{granularity}.h5ad'
 
 def main_pseudobulk(par):
 
@@ -75,15 +106,21 @@ def main_pseudobulk(par):
 
 
 if __name__ == '__main__':
+    import sys
+    dataset = os.environ.get('DATASET', 'op')
+
     results_dir = f'{TASK_GRN_INFERENCE_DIR}/resources/results/experiment/granular_pseudobulk'
     os.makedirs(results_dir, exist_ok=True)
-    dataset = 'op'
 
-    INFER_GRN = False
-    PSEUDOBULK = False
-    METRICS = True
+    INFER_GRN = os.environ.get('INFER_GRN', 'false').lower() == 'true'
+    PSEUDOBULK = os.environ.get('PSEUDOBULK', 'false').lower() == 'true'
+    METRICS = os.environ.get('METRICS', 'true').lower() == 'true'
+    SKIP_EXISTING = os.environ.get('SKIP_EXISTING', 'true').lower() == 'true'
 
     par = get_par(dataset)
+    par['temp_dir'] = f'{results_dir}/temp_grnboost'
+    par.setdefault('num_workers', 20)
+    par.setdefault('seed', 32)
     degrees = [-1.0, 1.0, 3.0, 5.0, 7.0, 9.0, 11.0, 13.0, 15.0, 17.0, 19.0]
     # - pseudobulk
     if PSEUDOBULK:
@@ -98,12 +135,25 @@ if __name__ == '__main__':
     # - infer grns
     if INFER_GRN:
         print('Inferring GRNs for pseudobulked data...', flush=True)
-        for granuality in tqdm(degrees, desc='Inferring GRNs'):
-            par['rna'] = f'{results_dir}/{dataset}_granularity_{granuality}.h5ad'
-            net = main_inference(par)
-
-            par['prediction'] = prediction_file_name(dataset, granuality)
-            net.write_h5ad(par['prediction'])
+        for method_name, method_fn in METHODS.items():
+            method_degrees = GRNBOOST_DEGREES if method_name == 'grnboost' else degrees
+            print(f'  Method: {method_name}, granularities: {method_degrees}', flush=True)
+            for granuality in tqdm(method_degrees, desc=f'Inferring GRNs ({method_name})'):
+                par['rna'] = f'{results_dir}/{dataset}_granularity_{granuality}.h5ad'
+                par['prediction'] = prediction_file_name(dataset, granuality, method_name)
+                if SKIP_EXISTING and os.path.exists(par['prediction']):
+                    print(f'    Skipping {method_name} @ {granuality} (already exists)', flush=True)
+                    continue
+                result = method_fn(par)
+                # portia returns a DataFrame without writing to disk; write it here
+                if result is not None and hasattr(result, 'to_csv'):
+                    dataset_id = ad.read_h5ad(par['rna'], backed='r').uns['dataset_id']
+                    output = ad.AnnData(X=None, uns={
+                        "method_id": method_name,
+                        "dataset_id": dataset_id,
+                        "prediction": result[["source", "target", "weight"]]
+                    })
+                    output.write(par['prediction'])
     
     # - consensus 
     
@@ -128,12 +178,15 @@ if __name__ == '__main__':
     if METRICS:
         print('Calculating metrics for pseudobulked data...', flush=True)
         rr_all_store = []
-        for granuality in tqdm(degrees, desc='Calculating metrics'):
-            print(f"Calculating metrics for {granuality} ...")
-            par['prediction'] = prediction_file_name(dataset, granuality)
-            metric_rr = main_metrics(par)
-            metric_rr['granularity'] = granuality
-            rr_all_store.append(metric_rr)
+        for method_name in METHODS:
+            method_degrees = GRNBOOST_DEGREES if method_name == 'grnboost' else degrees
+            for granuality in tqdm(method_degrees, desc=f'Calculating metrics ({method_name})'):
+                print(f"Calculating metrics for {method_name} @ granularity {granuality} ...")
+                par['prediction'] = prediction_file_name(dataset, granuality, method_name)
+                metric_rr = main_metrics(par)
+                metric_rr['granularity'] = granuality
+                metric_rr['method'] = method_name
+                rr_all_store.append(metric_rr)
         rr_all = pd.concat(rr_all_store, axis=0)
         rr_all['dataset'] = dataset
         rr_all.to_csv(f'{results_dir}/metrics_{dataset}.csv', index=False)

@@ -83,23 +83,21 @@ def _heatmap(pivot, title, out_path, xlabel):
     cmap = mcolors.LinearSegmentedColormap.from_list(
         'rg', ['#d73027', '#ffffbf', '#1a9850'])   # red (0) → yellow (1) → green (2)
 
-    fig, ax = plt.subplots(figsize=(max(6, pivot_display.shape[1] * 0.75 + 2),
-                                    max(4, pivot_display.shape[0] * 0.45 + 1.5)))
+    fig, ax = plt.subplots(figsize=(5, 5))
     sns.heatmap(pivot_display, ax=ax, cmap=cmap, vmin=0, vmax=CAP,
                 annot=pivot.round(2), fmt='.2f', linewidths=0.4, linecolor='white',
                 annot_kws={'size': 7},
-                cbar_kws={'label': f'Ratio (reversed / original), capped at {CAP}'})
+                cbar_kws={'label': 'Sensitivity', 'shrink': 0.6, 'aspect': 20,
+                          'ticks': [0, 1, 2]})
 
     # mark cells that were capped
     for (i, j), val in np.ndenumerate(pivot.values):
         if val > CAP:
-            ax.text(j + 0.5, i + 0.5, '▲', ha='center', va='center',
-                    fontsize=6, color='white', fontweight='bold')
+            pass  # capped cells shown via colour scale alone
 
-    ax.set_title(title, weight='bold', pad=10)
     ax.set_xlabel(xlabel)
     ax.set_ylabel('')
-    ax.tick_params(axis='x', rotation=35)
+    plt.xticks(rotation=45, ha='right')
     ax.tick_params(axis='y', rotation=0)
     plt.tight_layout()
     fig.savefig(out_path, dpi=300, transparent=True, bbox_inches='tight')
@@ -142,7 +140,7 @@ def _fraction_bar(frac_series, n_series, out_path, entity_label, palette=None):
     colors = [palette.get(name, _FALLBACK) if palette else _FALLBACK for name in frac.index]
 
     n_items = len(frac)
-    fig, ax = plt.subplots(figsize=(4, 0.25 * n_items + 0.8))
+    fig, ax = plt.subplots(figsize=(3.5, 0.22 * n_items + 0.8))
     bars = ax.barh(frac.index, frac.values, color=colors, edgecolor='white', height=0.65)
 
     # annotate with count
@@ -207,7 +205,7 @@ def _subset_barplot(dataset, methods, out_path):
 
     n_methods = len(_subset)
     n_metrics = len(_cols)
-    fig, ax = plt.subplots(figsize=(.6 * n_methods * n_metrics * 0.22 + 1.5, 2.2))
+    fig, ax = plt.subplots(figsize=(.7 * n_methods * n_metrics * 0.22 + 1.5, 2.2))
 
     _pal = {m: palette_metrics[m] for m in _long['Metric'].unique() if m in palette_metrics}
     sns.barplot(_long, x='Method', y='Relative score', hue='Metric', ax=ax, palette=_pal)
@@ -226,7 +224,7 @@ def _subset_barplot(dataset, methods, out_path):
     ax.margins(x=0.1)
     for side in ['right', 'top']:
         ax.spines[side].set_visible(False)
-    ax.legend(title='Metric', loc=(1.02, 0.1), frameon=False, fontsize=8)
+    ax.legend(title='Metric', loc=(1.02, 0), frameon=False, fontsize=9)
 
     plt.tight_layout()
     fig.savefig(out_path, dpi=300, transparent=True, bbox_inches='tight')

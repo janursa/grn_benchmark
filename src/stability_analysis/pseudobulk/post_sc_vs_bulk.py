@@ -32,15 +32,19 @@ from src.helper import plot_heatmap, surrogate_names, custom_jointplot, palette_
                         plot_raw_scores
 TASK_GRN_INFERENCE_DIR = env['TASK_GRN_INFERENCE_DIR']
 sys.path.append(TASK_GRN_INFERENCE_DIR)
-from src.utils.config import  FINAL_METRICS
+from src.utils.config import METRICS
 
 df_all = []
 for dataset in ['replogle', 'xaira_HCT116', 'xaira_HEK293T']:
-    df_d = pd.read_csv(f"{env['TASK_GRN_INFERENCE_DIR']}/resources/results/experiment/bulk_vs_sc/metrics_{dataset}.csv")
+    df_d = pd.read_csv(f"{RESULTS_DIR}/experiment/bulk_vs_sc/metrics_{dataset}.csv")
     df_all.append(df_d)
 df_all = pd.concat(df_all, ignore_index=True)
-df_all = df_all[[m for m in FINAL_METRICS if m in df_all.columns] + ['dataset', 'data_type']]
-df_all.style.background_gradient()
+metric_cols = [m for m in METRICS if m in df_all.columns]
+group_cols = ['dataset', 'data_type']
+# average across methods if method column present
+df_all = df_all[metric_cols + group_cols + (['method'] if 'method' in df_all.columns else [])]
+if 'method' in df_all.columns:
+    df_all = df_all.groupby(group_cols)[metric_cols].mean().reset_index()
 
 df = df_all.copy()
 

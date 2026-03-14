@@ -41,15 +41,3 @@ export UTILS_DIR="${TASK_GRN_INFERENCE_DIR}/src/utils"
 # echo "METRICS_DIR=$METRICS_DIR"
 # echo "UTILS_DIR=$UTILS_DIR"
 
-
-# -------- Generate config.yaml from this env.sh --------
-output="env.yaml"
-echo "# Auto-generated from env.sh" > "$output"
-
-# Iterate over exported variables in this script
-for var in TASK_GRN_INFERENCE_DIR geneRNBI_DIR PYTHONPATH RESULTS_DIR IMAGES_DIR RESOURCES_DIR INFERENCE_DIR EVALUATION_DIR PRIOR_DIR EXTENDED_DIR METHODS_DIR METRICS_DIR UTILS_DIR DOCS_IMAGES_DIR; do
-    value="$(eval echo "\"\$$var\"")"
-    echo "$var: \"$value\"" >> "$output"
-done
-
-echo "Wrote $output"

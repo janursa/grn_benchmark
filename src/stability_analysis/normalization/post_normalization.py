@@ -35,7 +35,7 @@ from src.helper import plot_heatmap, surrogate_names, custom_jointplot, palette_
 
 TASK_GRN_INFERENCE_DIR = env['TASK_GRN_INFERENCE_DIR']
 sys.path.append(TASK_GRN_INFERENCE_DIR)
-from task_grn_inference.src.utils.config import DATASETS_METRICS, DATASETS_CELLTYPES, DATASETS, FINAL_METRICS, METRICS, METHODS
+from task_grn_inference.src.utils.config import DATASETS_METRICS, DATASETS_CELLTYPES, DATASETS, METRICS, METHODS
 
 import argparse
 parser = argparse.ArgumentParser()

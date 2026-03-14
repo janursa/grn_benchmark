@@ -16,11 +16,20 @@ To run this repository, follow these steps:
 
    ```bash
    aws s3 sync s3://openproblems-data/resources/grn/results/ resources/results --no-sign-request
+   ```
+
+3. **Configure paths** by editing `env.sh` to point to your local directories, then regenerate `env.yaml` (used by all Python scripts):
+
+   ```bash
+   bash generate_env_yaml.sh
+   ```
+
+   Re-run this whenever you change `env.sh`. Do **not** run it from SLURM jobs.
 
 ## Repository Structure
 
-- **`notebooks/`** – Jupyter notebooks for processing results and explanatory analysis.  
-- **`src/`** – Source files used in the notebooks.  
+- **`scripts/`** – Scripts processing results and explanatory analysis.  
+- **`src/`** – Source files 
 - **`draw/`** – Assembled figures.  
 
 ## Authors

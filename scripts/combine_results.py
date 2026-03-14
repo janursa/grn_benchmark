@@ -22,7 +22,7 @@ from task_grn_inference.src.utils.config import DATASETS, METRICS
 def combine_results(local_run=False):
     """Combine results from individual dataset folders into all_new folder."""
     
-    base_dir =  Path(f'{TASK_GRN_INFERENCE_DIR}/resources/results')
+    base_dir = Path(env['RESULTS_DIR'])
     save_dir = base_dir / 'all_new'
     
     # Create output directory
@@ -153,10 +153,12 @@ if __name__ == '__main__':
         description='Combine results from individual dataset folders'
     )
     parser.add_argument(
-        '--local_run',
-        action='store_true',
-        help='Use local run mode - read scores from all_scores.csv instead of individual YAML files'
+        '--aws_run',
+        dest='local_run',
+        action='store_false',
+        help='Use AWS run mode - read scores from individual score_uns.yaml files instead of all_scores.csv'
     )
+    parser.set_defaults(local_run=True)
     
     args = parser.parse_args()
     combine_results(local_run=args.local_run)

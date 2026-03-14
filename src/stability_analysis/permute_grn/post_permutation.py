@@ -302,14 +302,16 @@ def plot_metrics_as_axes(metrics, dataset, save_tag='_all', use_raw_scores=False
             
             
             # Normalize the data for this permutation type (or use raw scores)
+            _SELECTED_METHODS = ['PPCOR', 'GRNBoost2', 'Pearson Corr.', 'Portia', 'Scenic+', 'scPRINT', 'Scenic']
             if use_raw_scores:
-                # Use raw scores instead of normalization
+                # Use raw scores instead of normalization, but same method subset
                 df = df_metric[df_metric['Permute type'] == permute_type].drop(columns='Permute type').copy()
                 if df.empty:
                     continue
+                df = df[df['model'].isin(_SELECTED_METHODS)]
                 df_pivot = df.pivot(index='model', columns='Degree', values='r2score')
             else:
-                df_metric_short = df_metric[df_metric['model'].isin(['GRNBoost2', 'Scenic+', 'Pearson Corr.', 'Portia', 'PPCOR'])]
+                df_metric_short = df_metric[df_metric['model'].isin(_SELECTED_METHODS)]
                 # df_metric_short = df_metric.copy()
                 df_pivot = normalize_minmax(df_metric_short, permute_type)
 
@@ -422,7 +424,8 @@ def _load_ratio_df(ptype):
             continue
         df0   = pd.read_csv(f0,   index_col=0)
         df100 = pd.read_csv(f100, index_col=0)
-        avail = [c for c in rel_cols if c in df0.columns and c in df100.columns]
+        ds_applicable = dataset_metric_cols(ds)
+        avail = [c for c in rel_cols if c in df0.columns and c in df100.columns and c in ds_applicable]
         for method in df0.index.intersection(df100.index):
             for col in avail:
                 v0, v100 = df0.loc[method, col], df100.loc[method, col]
@@ -451,7 +454,7 @@ def _sensitivity_bar(ptype, out_path):
     colors = [palette_metrics.get(m, '#aab4be') for m in stats.index]
 
     n_items = len(stats)
-    fig, ax = plt.subplots(figsize=(3, 0.20 * n_items + 0.5))
+    fig, ax = plt.subplots(figsize=(3.5, 0.22 * n_items + 0.5))
     bars = ax.barh(stats.index, stats['frac'].values, color=colors,
                    edgecolor='white', height=0.65)
 
@@ -464,7 +467,7 @@ def _sensitivity_bar(ptype, out_path):
     ax.axvline(x=0.5, color='black', linestyle='--', linewidth=1, alpha=0.7)
     ax.set_xlim(0, 1.22)
     ax.set_xlabel('Sensitivity')
-    ax.set_ylabel('')
+    ax.set_ylabel('Metric')
     ax.invert_yaxis()
     for side in ['right', 'top']:
         ax.spines[side].set_visible(False)
@@ -515,7 +518,7 @@ def _subset_degree_plot(dataset, methods_list, ptype, out_path):
         return
 
     n = len(col_dfs)
-    fig, axes = plt.subplots(1, n, figsize=(2.2 * n + 0.5, 2.5), sharey=False)
+    fig, axes = plt.subplots(1, n, figsize=(1.8 * n + 0.5, 2), sharey=False)
     if n == 1:
         axes = [axes]
 
@@ -527,6 +530,7 @@ def _subset_degree_plot(dataset, methods_list, ptype, out_path):
             ax.plot(df_col.index, df_col[method].values,
                     marker='o', label=m_name, color=color, linewidth=1.5)
 
+        ax.margins(x=0.1, y=0.15)
         ax.set_title(surrogate_names.get(col, col), fontsize=9)
         ax.set_xlabel('Permutation (%)')
         ax.set_ylabel('Score' if idx == 0 else '')

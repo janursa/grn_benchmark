@@ -25,7 +25,7 @@ GRN_BENCHMARK_DIR = env['geneRNBI_DIR']
 # Add task_grn_inference to path; clear cached src so it re-resolves to task_grn_inference's src
 sys.path.insert(0, TASK_GRN_INFERENCE_DIR)
 sys.modules.pop('src', None)
-from src.utils.config import DATASETS, METHODS, METRICS, FINAL_METRICS
+from src.utils.config import DATASETS, METHODS, METRICS
 
 
 def process_scores_from_yaml(score_file):
@@ -254,15 +254,8 @@ def main(local_run=False, methods=None, datasets=None):
         for dataset, metric_list in metrics_kept_per_dataset.items():
             all_kept_metrics.update(metric_list)
         
-        print(f"   Loaded metrics that passed criteria: {len(all_kept_metrics)} metrics")
+        print(f"   Loaded metrics that passed applicability criteria: {len(all_kept_metrics)} metrics")
         print(f"   Metrics: {sorted(all_kept_metrics)}")
-        
-        # Filter FINAL_METRICS to only include those that passed
-        final_metrics_filtered = [m for m in FINAL_METRICS if m in all_kept_metrics]
-        print(f"   FINAL_METRICS filtered from {len(FINAL_METRICS)} to {len(final_metrics_filtered)} metrics")
-        
-        # Use filtered metrics for ranking
-        FINAL_METRICS_TO_USE = final_metrics_filtered
     
     
     # Step 3: Process scores - EXACT LOGIC FROM NOTEBOOK
@@ -272,9 +265,9 @@ def main(local_run=False, methods=None, datasets=None):
     metrics = [m for m in scores_all.columns.tolist() if m in METRICS]
     print(f"   Using all METRICS for display: {len(metrics)} metrics")
     
-    # Get only FINAL_METRICS for ranking (filtered by applicability)
-    final_metrics = [m for m in METRICS if m in FINAL_METRICS_TO_USE]
-    print(f"   Using filtered FINAL_METRICS for ranking: {len(final_metrics)} metrics")
+    # Get all METRICS that passed applicability for ranking
+    final_metrics = [m for m in METRICS if m in all_kept_metrics]
+    print(f"   Using applicability-filtered METRICS for ranking: {len(final_metrics)} metrics")
     print(f"   Ranking metrics: {final_metrics}")
     
     # Normalize the scores per dataset
@@ -324,10 +317,9 @@ def main(local_run=False, methods=None, datasets=None):
         # Restore NaN
         df_metrics.loc[original_nans, col] = float('nan')
     
-    # Keep all metrics but reorder: FINAL_METRICS first, then others
-    metrics_in_final = [m for m in FINAL_METRICS if m in df_metrics.columns]
-    metrics_not_in_final = [m for m in df_metrics.columns if m not in FINAL_METRICS]
-    df_metrics = df_metrics[metrics_in_final + metrics_not_in_final]
+    # Keep all metrics in METRICS order
+    metrics_ordered = [m for m in METRICS if m in df_metrics.columns]
+    df_metrics = df_metrics[metrics_ordered]
     
     # Average scores for all datasets (per dataset)
     def mean_for_datasets(df):
@@ -368,16 +360,14 @@ def main(local_run=False, methods=None, datasets=None):
         print(f"   Warning: Found duplicate methods in scores, taking mean")
         df_scores = df_scores.groupby(df_scores.index).mean()
     
-    # Calculate overall score using ONLY FINAL_METRICS
-    # This ensures ranking is based only on the final metrics
+    # Calculate overall score using all applicability-filtered metrics + datasets
     final_metrics_cols = [col for col in final_metrics if col in df_scores.columns]
     dataset_cols = [col for col in df_scores.columns if col in DATASETS]
     
-    # Average only FINAL_METRICS and dataset scores for overall ranking
     ranking_cols = final_metrics_cols + dataset_cols
     df_scores['overall_score'] = df_scores[ranking_cols].median(axis=1, skipna=True)
     
-    print(f"   Overall scores calculated using only FINAL_METRICS ({len(final_metrics_cols)} metrics) + datasets ({len(dataset_cols)} datasets)")
+    print(f"   Overall scores calculated using applicability-filtered metrics ({len(final_metrics_cols)} metrics) + datasets ({len(dataset_cols)} datasets)")
     
     # Keep track of which methods are in the filtered scores
     methods_in_scores = df_scores.index.tolist()
@@ -470,7 +460,6 @@ def main(local_run=False, methods=None, datasets=None):
     doc_png = DOCS_IMAGES_DIR / 'summary_figure.png'
     cmd = f"cp {summary_figure}.png {doc_png}"
     subprocess.run(cmd, shell=True)
-    print(f"\n✓ Also saved figure to docs folder: {doc_png}")
     
     print("\n" + "=" * 80)
     print("Done!")
@@ -484,10 +473,12 @@ if __name__ == '__main__':
         description='Create overview figure from combined results'
     )
     parser.add_argument(
-        '--local_run',
-        action='store_true',
-        help='Use local run mode - read scores from all_scores.csv instead of score_uns.yaml'
+        '--aws_run',
+        dest='local_run',
+        action='store_false',
+        help='Use AWS run mode - read scores from score_uns.yaml instead of all_scores.csv'
     )
+    parser.set_defaults(local_run=True)
     parser.add_argument(
         '--methods',
         nargs='+',

@@ -105,7 +105,7 @@ def load_scores_from_yaml(dataset):
     return df
 
 
-def evaluate_metric_for_dataset(scores_df, metric, cv_threshold=0.2):
+def evaluate_metric_for_dataset(scores_df, metric, cv_threshold=0.2, nc_score=None):
     """
     Evaluate if a metric should be kept for a dataset.
     
@@ -113,6 +113,9 @@ def evaluate_metric_for_dataset(scores_df, metric, cv_threshold=0.2):
         scores_df: DataFrame with methods as rows and metrics as columns
         metric: The metric name to evaluate
         cv_threshold: Threshold for coefficient of variation (std/mean)
+        nc_score: Negative control score for this metric on this dataset.
+                  If provided, used as the per-dataset threshold (instead of
+                  the global METRIC_THRESHOLDS value).
     
     Returns:
         dict with evaluation results
@@ -147,8 +150,13 @@ def evaluate_metric_for_dataset(scores_df, metric, cv_threshold=0.2):
     # Coefficient of variation
     cv = (max_val - min_val) / mean_val if mean_val != 0 else np.inf
     
-    # Get threshold for this metric
-    threshold = METRIC_THRESHOLDS.get(metric, 0.1)  # Default to 0.1 if not specified
+    # Threshold: use max(nc_score, global_threshold) so NC is used when stricter,
+    # and the global floor prevents near-zero NC values from trivially passing.
+    global_threshold = METRIC_THRESHOLDS.get(metric, 0.1)
+    if nc_score is not None and not np.isnan(nc_score):
+        threshold = max(nc_score, global_threshold)
+    else:
+        threshold = global_threshold
     
     # Decision criteria
     cv_passes = cv >= cv_threshold
@@ -161,7 +169,7 @@ def evaluate_metric_for_dataset(scores_df, metric, cv_threshold=0.2):
     if not cv_passes:
         reasons.append(f'Low variability (CV={cv:.3f} < {cv_threshold})')
     if not max_passes:
-        reasons.append(f'Low max score (max={max_val:.3f} < {threshold})')
+        reasons.append(f'Low max score (max={max_val:.3f} < {threshold:.3f})')
     
     if keep:
         reason = 'Passes all criteria'
@@ -179,6 +187,8 @@ def evaluate_metric_for_dataset(scores_df, metric, cv_threshold=0.2):
         'cv': cv,
         'max': max_val,
         'threshold': threshold,
+        'global_threshold': global_threshold,
+        'nc_score': nc_score if (nc_score is not None and not np.isnan(nc_score)) else np.nan,
         'cv_threshold': cv_threshold
     }
 
@@ -206,6 +216,17 @@ def evaluate_all_datasets(datasets=None, metrics=None, cv_threshold=0.2, output_
         scores_all = pd.read_csv(env.get('RESULTS_DIR', f"{TASK_GRN_INFERENCE_DIR}/resources/results") + "/all_scores.csv")
         scores_all = scores_all[METRICS + ['method', 'dataset']]
         scores_all.rename(columns={'method': 'model'}, inplace=True)
+    
+    # Pre-extract negative control scores per dataset per metric (used as per-dataset threshold)
+    nc_scores = {}  # nc_scores[dataset][metric] = nc_score
+    if local_run:
+        nc_df = scores_all[scores_all['model'] == 'negative_control'].copy()
+        for _, row in nc_df.iterrows():
+            ds = row['dataset']
+            nc_scores.setdefault(ds, {})
+            for metric in metrics:
+                if metric in row and not pd.isna(row[metric]):
+                    nc_scores[ds][metric] = row[metric]
     
     # print(f"Evaluating {len(metrics)} metrics across {len(datasets)} datasets")
     # print(f"CV threshold: {cv_threshold}")
@@ -243,7 +264,8 @@ def evaluate_all_datasets(datasets=None, metrics=None, cv_threshold=0.2, output_
 
         # Evaluate each metric
         for metric in metrics:
-            result = evaluate_metric_for_dataset(scores_df, metric, cv_threshold)
+            nc_score = nc_scores.get(dataset, {}).get(metric, None)
+            result = evaluate_metric_for_dataset(scores_df, metric, cv_threshold, nc_score=nc_score)
             result['dataset'] = dataset
             all_results.append(result)
             
@@ -260,7 +282,7 @@ def evaluate_all_datasets(datasets=None, metrics=None, cv_threshold=0.2, output_
     
     # Reorder columns for better readability
     cols_order = ['dataset', 'metric', 'keep', 'present', 'reason', 
-                  'n_methods', 'mean', 'std', 'cv', 'max', 'threshold', 'cv_threshold']
+                  'n_methods', 'mean', 'std', 'cv', 'max', 'threshold', 'global_threshold', 'nc_score', 'cv_threshold']
     cols_order = [c for c in cols_order if c in results_df.columns]
     results_df = results_df[cols_order]
     
@@ -338,9 +360,19 @@ def evaluate_all_datasets(datasets=None, metrics=None, cv_threshold=0.2, output_
         lambda row: f"{row[('cv', 'min')]:.1f}/{row[('cv', 'max')]:.1f}", axis=1
     )
     
-    # Add threshold values for each metric
-    metric_thresholds = metric_present.groupby('metric')['threshold'].first()
-    metric_summary['Threshold'] = metric_thresholds
+    # Add threshold column: global floor only
+    global_thresholds = metric_present.groupby('metric')['global_threshold'].first()
+    nc_stats = metric_present.groupby('metric')['nc_score'].agg(['min', 'max'])
+    metric_summary['Threshold'] = global_thresholds.map(lambda g: f"{g:.2f}")
+    def format_nc(row):
+        nc_min, nc_max = row['min'], row['max']
+        if pd.isna(nc_min):
+            return ""
+        elif round(nc_min, 2) == round(nc_max, 2):
+            return f"{nc_min:.2f}"
+        else:
+            return f"{nc_min:.2f}/{nc_max:.2f}"
+    metric_summary['NC'] = nc_stats.apply(format_nc, axis=1)
     
     # Get valid datasets (where metric was actually computed AND kept)
     metric_kept = metric_present[metric_present['keep'] == 1].copy()
@@ -461,11 +493,9 @@ def evaluate_all_datasets(datasets=None, metrics=None, cv_threshold=0.2, output_
     metadata_df = pd.DataFrame(metadata_rows, index=metric_summary.index)
     
     # Add metric name as a column for display with surrogate names
-    # Add ** to metrics that are in FINAL_METRICS
-    from task_grn_inference.src.utils.config import FINAL_METRICS
     metric_summary_display = metric_summary.copy()
     metric_summary_display.insert(0, 'Metric', [
-        surrogate_names.get(m, m) + '**' if m in FINAL_METRICS else surrogate_names.get(m, m) 
+        surrogate_names.get(m, m)
         for m in metric_summary_display.index
     ])
     
@@ -480,9 +510,10 @@ def evaluate_all_datasets(datasets=None, metrics=None, cv_threshold=0.2, output_
     metric_summary_final['Datasets'] = metadata_df['Datasets'].values
     metric_summary_final['Keep/Total'] = metric_summary_display['Keep/Total'].values
     metric_summary_final['Keep %'] = metric_summary_display['Keep %'].values
-    metric_summary_final['Value (min/max)'] = metric_summary_display['Value (min/max)'].values
-    metric_summary_final['Variability (min/max)'] = metric_summary_display['Variability (min/max)'].values
+    metric_summary_final['Value\n(min/max)'] = metric_summary_display['Value (min/max)'].values
+    metric_summary_final['Variability\n(min/max)'] = metric_summary_display['Variability (min/max)'].values
     metric_summary_final['Threshold'] = metric_summary_display['Threshold'].values
+    metric_summary_final['NC'] = metric_summary_display['NC'].values
     
     # Sort by Keep %
     metric_summary_final = metric_summary_final.sort_values(by='Keep %', ascending=False)
@@ -538,7 +569,7 @@ def evaluate_all_datasets(datasets=None, metrics=None, cv_threshold=0.2, output_
         fig_width = 16
         fig_height = 8
     
-        col_widths = [0.12, 0.25, 0.20, 0.20, 0.06, 0.1, 0.1, 0.05]  # Must sum to ~1.0
+        col_widths = [0.12, 0.22, 0.17, 0.20, 0.06, 0.08, 0.08, 0.07, 0.07]  # Must sum to ~1.0
         row_height = 0.08
         font_size = 7
         
@@ -560,10 +591,10 @@ def evaluate_all_datasets(datasets=None, metrics=None, cv_threshold=0.2, output_
         table.auto_set_font_size(False)
         table.set_fontsize(font_size)
         
-        # Set row heights
+        # Set row heights — header row taller to fit two-line labels
         for i in range(len(metric_summary_final) + 1):  # +1 for header
             for j in range(len(metric_summary_final.columns)):
-                table[(i, j)].set_height(row_height)
+                table[(i, j)].set_height(row_height * 1.6 if i == 0 else row_height)
         
         # Style header
         for i in range(len(metric_summary_final.columns)):
@@ -697,9 +728,6 @@ def plot_metric_applicability():
                 ax.text(xi - 0.18, yi, '✓', ha='center', va='center',
                         fontsize=5, color='#2e7d32', fontweight='bold')
                 ax.text(xi + 0.18, yi, '★', ha='center', va='center',
-                        fontsize=4, color='#c0392b', fontweight='bold')
-            elif passed:
-                ax.text(xi, yi, '★', ha='center', va='center',
                         fontsize=4, color='#c0392b', fontweight='bold')
 
     ax.set_xticks(range(n_datasets))

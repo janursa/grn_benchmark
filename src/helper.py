@@ -98,6 +98,9 @@ palette_methods = {key:color for key, color in zip(SELECTED_MODELS, sns.color_pa
 _extra_metric_colors = sns.color_palette('tab20', 20)[14:]  # distinct colors not in colors_blind
 _metric_color_list = colors_blind + list(_extra_metric_colors)
 palette_metrics = {surrogate_names.get(m, m): _metric_color_list[i] for i, m in enumerate(METRICS)}
+# Override TF binding and Gene sets recovery with more distinct colors (avoid confusion with WS greens/yellows)
+palette_metrics['TF binding'] = '#882255'          # dark magenta
+palette_metrics['Gene sets recovery'] = '#44AA99'  # teal
 
 palette_celltype = ['#c4d9b3', '#c5bc8e', '#c49e81', '#c17d88', 'gray', 'lightsteelblue']
 
