@@ -4,4 +4,4 @@
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 source env.sh
-python src/stability_analysis/metrics_applicibility/script.py --local_run "$@"
+python scripts/evaluate_metric_applicability.py --local_run "$@"

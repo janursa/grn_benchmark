@@ -24,13 +24,19 @@ echo "── Step 2: Combining results → all_new/ ──"
 python scripts/combine_results.py
 
 echo ""
-echo "── Step 3: Plotting dataset heatmaps ──"
+echo "── Step 3: Evaluating metric applicability per dataset ──"
+python scripts/evaluate_metric_applicability.py \
+    --local_run \
+    --output "${RESULTS_DIR}/metric_quality_evaluation.csv"
+
+echo ""
+echo "── Step 4: Plotting dataset heatmaps ──"
 python scripts/plot_raw_scores.py \
     --output_dir_local "${geneRNBI_DIR}/output/figs/raw_scores" \
     --output_dir_docs "${TASK_GRN_INFERENCE_DIR}/docs/source/images"
 
 echo ""
-echo "── Step 4: Generating summary figure ──"
+echo "── Step 5: Generating summary figure ──"
 python scripts/create_overview_figure.py
 
 echo ""

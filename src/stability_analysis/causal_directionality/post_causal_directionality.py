@@ -78,14 +78,17 @@ def _sort_methods(pivot):
 CAP = 2.0
 
 def _heatmap(pivot, title, out_path, xlabel):
-    pivot_display = pivot.clip(upper=CAP)
+    nan_mask = pivot.isna()
+    pivot_display = pivot.clip(upper=CAP).fillna(0)
+    annot_data = pivot.clip(upper=CAP).applymap(lambda v: '' if pd.isna(v) else f'{v:.2f}')
 
     cmap = mcolors.LinearSegmentedColormap.from_list(
         'rg', ['#d73027', '#ffffbf', '#1a9850'])   # red (0) → yellow (1) → green (2)
 
     fig, ax = plt.subplots(figsize=(5, 5))
     sns.heatmap(pivot_display, ax=ax, cmap=cmap, vmin=0, vmax=CAP,
-                annot=pivot.round(2), fmt='.2f', linewidths=0.4, linecolor='white',
+                mask=nan_mask,
+                annot=annot_data, fmt='', linewidths=0.4, linecolor='white',
                 annot_kws={'size': 7},
                 cbar_kws={'label': 'Sensitivity', 'shrink': 0.6, 'aspect': 20,
                           'ticks': [0, 1, 2]})

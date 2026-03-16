@@ -113,7 +113,7 @@ for i, (dataset, ax) in enumerate(zip(DATASETS, axes)):
         ax.set_ylabel('')
 
 plt.tight_layout()
-file_name = f"{figs_dir}/evaluation_scores_imputation_lineplot.png"
+file_name = f"{figs_dir}/granularity_lineplot.png"
 fig.savefig(file_name, dpi=300, transparent=True, bbox_inches='tight')
 print(f"Saved: {file_name}")
 
@@ -139,10 +139,10 @@ pivot = pd.DataFrame(heatmap_data).T.T
 cmap = mcolors.LinearSegmentedColormap.from_list(
     'rg', ['#d73027', '#ffffbf', '#1a9850'])
 
-pivot_display = pivot.clip(upper=CAP)
+pivot_display = pivot.clip(upper=CAP).fillna(0)
 fig, ax = plt.subplots(figsize=(6, 4))
 sns.heatmap(pivot_display, ax=ax, cmap=cmap, vmin=0, vmax=CAP,
-            annot=pivot.round(2), fmt='.2f', linewidths=0.4, linecolor='white',
+            annot=pivot.clip(upper=CAP).fillna(0).round(2), fmt='.2f', linewidths=0.4, linecolor='white',
             annot_kws={'size': 7},
             cbar_kws={'label': 'Sensitivity', 'shrink': 0.6, 'aspect': 20,
                       'ticks': [0, 1, 2]})
@@ -151,7 +151,7 @@ ax.set_ylabel('')
 plt.xticks(rotation=35, ha='right', fontsize=8)
 ax.tick_params(axis='y', rotation=0)
 plt.tight_layout()
-heatmap_file = f"{figs_dir}/evaluation_scores_pseudobulk_heatmap.png"
+heatmap_file = f"{figs_dir}/granularity_heatmap.png"
 fig.savefig(heatmap_file, dpi=300, transparent=True, bbox_inches='tight')
 print(f"Saved: {heatmap_file}")
 
@@ -183,9 +183,9 @@ method_pivot_df = method_pivot_df.reindex(
     columns=[m for m in ['pearson_corr', 'portia', 'grnboost'] if m in method_pivot_df.columns])
 
 fig, ax = plt.subplots(figsize=(4, 4))
-method_display = method_pivot_df.clip(upper=CAP)
+method_display = method_pivot_df.clip(upper=CAP).fillna(0)
 sns.heatmap(method_display, ax=ax, cmap=cmap, vmin=0, vmax=CAP,
-            annot=method_pivot_df.round(2), fmt='.2f', linewidths=0.4, linecolor='white',
+            annot=method_pivot_df.clip(upper=CAP).fillna(0).round(2), fmt='.2f', linewidths=0.4, linecolor='white',
             annot_kws={'size': 7},
             cbar_kws={'label': 'Sensitivity', 'shrink': 0.6, 'aspect': 20,
                       'ticks': [0, 1, 2]})
@@ -194,6 +194,6 @@ ax.set_ylabel('')
 plt.xticks(rotation=35, ha='right', fontsize=8)
 ax.tick_params(axis='y', rotation=0)
 plt.tight_layout()
-method_heatmap_file = f"{figs_dir}/evaluation_scores_pseudobulk_heatmap_methods.png"
+method_heatmap_file = f"{figs_dir}/granularity_heatmap_methods.png"
 fig.savefig(method_heatmap_file, dpi=300, transparent=True, bbox_inches='tight')
 print(f"Saved: {method_heatmap_file}")

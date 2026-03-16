@@ -109,7 +109,7 @@ if __name__ == '__main__':
     import sys
     dataset = os.environ.get('DATASET', 'op')
 
-    results_dir = f'{TASK_GRN_INFERENCE_DIR}/resources/results/experiment/granular_pseudobulk'
+    results_dir = os.path.join(env['RESULTS_DIR'], 'experiment/granular_pseudobulk')
     os.makedirs(results_dir, exist_ok=True)
 
     INFER_GRN = os.environ.get('INFER_GRN', 'false').lower() == 'true'
