@@ -23,6 +23,24 @@ TASK_GRN_INFERENCE_DIR = env['TASK_GRN_INFERENCE_DIR']
 sys.path.insert(0, TASK_GRN_INFERENCE_DIR)
 from task_grn_inference.src.utils.config import DATASETS_METRICS, METHODS, METRICS
 
+CATEGORY_TO_METRICS = {
+    'regression':            ['r_precision', 'r_recall'],
+    'ws_distance':           ['ws_precision', 'ws_recall'],
+    'tf_recovery':           ['t_rec_precision', 't_rec_recall'],
+    'tf_binding':            ['tfb_f1'],
+    'sem':                   ['sem'],
+    'gs_recovery':           ['gs_f1'],
+    'vc':                    ['vc'],
+    'replicate_consistency': ['replicate_consistency'],
+}
+
+def metrics_for_dataset(dataset: str) -> list:
+    """Return the metrics applicable to a dataset based on DATASETS_METRICS config."""
+    applicable = []
+    for cat in DATASETS_METRICS.get(dataset, []):
+        applicable.extend(CATEGORY_TO_METRICS.get(cat, []))
+    return applicable
+
 
 # ── Score loading ──────────────────────────────────────────────────────────────
 
@@ -77,6 +95,8 @@ def plot_raw_scores(
         os.makedirs(out_dir, exist_ok=True)
 
     for dataset in datasets:
+        dataset_metrics = [m for m in metrics_for_dataset(dataset) if m in metrics]
+
         scores = scores_all[scores_all["dataset"] == dataset].copy()
         scores = scores.loc[:, ~scores.isna().all()]
         if scores.empty:
@@ -84,7 +104,7 @@ def plot_raw_scores(
             continue
 
         scores = scores.set_index("model").drop(columns="dataset", errors="ignore")
-        scores = scores[[c for c in metrics if c in scores.columns]]
+        scores = scores[[c for c in dataset_metrics if c in scores.columns]]
         if scores.empty:
             print(f"  No metric columns for dataset {dataset} — skipping")
             continue
